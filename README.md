@@ -95,9 +95,9 @@
 
 **Branch rule:** If `search_listings` returns an empty list, put a message in `session["error"]` that tells the user what to change (for example, "No listings matched 'sequin cowboy boots' in size S under $10. Try a higher max price, a different size, or fewer keywords.") and return the session without calling `suggest_outfit` or `create_fit_card`. Otherwise, take the first result (the best match) as `session["selected_item"]` and go to `suggest_outfit`.
 
-**Where it lives:** `agent.py::run_agent`
+**Where it lives:** `agent.py::run_agent` (the `search` step in the `while` loop)
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regex in `agent.py::parse_query`. It pulls a max price (`$30`, `under $30`, `under 30`) and a size (`size M`, `in size M`; bare numbers become `US 8`), removes them, strips filler like "looking for", and uses the rest as the description.
 
 **What moves through the session:** `query` → `parsed` (description, size, max_price) → `search_results` → *branch:* `error` and stop if empty, else `selected_item` → `outfit_suggestion` → `fit_card`.
 

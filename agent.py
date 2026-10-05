@@ -13,6 +13,8 @@ Build and test your three tools in `tools.py` first. Then come here.
     python agent.py          runs both example paths below
 """
 
+import re
+
 import config
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
@@ -48,6 +50,68 @@ def new_session(query: str, wardrobe: dict) -> dict:
 
 
 # ── planning loop ─────────────────────────────────────────────────────────────
+
+# ── query parsing ─────────────────────────────────────────────────────────────
+
+_PRICE_RE = re.compile(
+    r"(?:under|below|less than|max|up to|<)?\s*\$\s*(\d+(?:\.\d+)?)"   # "$30", "under $30"
+    r"|(?:under|below|less than|up to)\s+(\d+(?:\.\d+)?)\b",            # "under 30"
+    re.IGNORECASE,
+)
+_SIZE_RE = re.compile(r"\b(?:in\s+)?size\s+([a-z0-9./]+)", re.IGNORECASE)
+_FILLER_RE = re.compile(r"^\s*(?:i'?m\s+)?(?:looking for|i want|find me|show me)\s+", re.IGNORECASE)
+
+
+def parse_query(query: str) -> dict:
+    """
+    Pull a description, a size and a max price out of plain language, with regex.
+
+        "vintage graphic tee under $30, size M"
+            → {"description": "vintage graphic tee", "size": "M", "max_price": 30.0}
+
+    Anything not found is None. A bare shoe size like "size 8" becomes "US 8",
+    because that's how shoe sizes are written in the listings data.
+    """
+    text = query or ""
+
+    max_price = None
+    price_match = _PRICE_RE.search(text)
+    if price_match:
+        max_price = float(price_match.group(1) or price_match.group(2))
+        text = text.replace(price_match.group(0), " ")
+
+    size = None
+    size_match = _SIZE_RE.search(text)
+    if size_match:
+        size = size_match.group(1).upper()
+        if re.fullmatch(r"\d+(?:\.\d+)?", size):   # "8" → "US 8"
+            size = f"US {size}"
+        text = text.replace(size_match.group(0), " ")
+
+    text = _FILLER_RE.sub("", text)
+    description = " ".join(re.sub(r"[,;]", " ", text).split())
+
+    return {"description": description, "size": size, "max_price": max_price}
+
+
+def _no_results_message(parsed: dict) -> str:
+    """Say what was searched and what the user could change."""
+    searched = f"'{parsed['description']}'" if parsed["description"] else "your search"
+    filters, tips = [], []
+    if parsed["size"]:
+        filters.append(f"in size {parsed['size']}")
+        tips.append("a different size")
+    if parsed["max_price"] is not None:
+        filters.append(f"under ${parsed['max_price']:g}")
+        tips.append("a higher max price")
+    tips.append("different keywords")
+
+    where = (" " + " ".join(filters)) if filters else ""
+    tip_text = ", ".join(tips[:-1]) + " or " + tips[-1] if len(tips) > 1 else tips[0]
+    return f"No listings matched {searched}{where}. Try {tip_text}."
+
+
+# ── the loop ──────────────────────────────────────────────────────────────────
 
 def run_agent(query: str, wardrobe: dict) -> dict:
     """
@@ -107,8 +171,45 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     """
     session = new_session(query, wardrobe)
 
-    # TODO: delete these two lines and build the loop.
-    session["error"] = "The planning loop isn't built yet — see the TODO in agent.py."
+    next_step = "parse"
+    count = 0
+
+    while next_step != "done":
+        count += 1
+        trace.check_iterations(count)          # stop condition
+
+        if next_step == "parse":
+            session["parsed"] = parse_query(query)
+            next_step = "search"
+
+        elif next_step == "search":
+            p = session["parsed"]
+            session["search_results"] = search_listings(
+                p["description"], p["size"], p["max_price"]
+            )
+            # THE BRANCH: decide the next step from what search returned
+            if not session["search_results"]:
+                session["error"] = _no_results_message(p)
+                next_step = "done"             # stop: never call suggest_outfit with nothing
+            else:
+                next_step = "select"
+
+        elif next_step == "select":
+            session["selected_item"] = session["search_results"][0]   # best match
+            next_step = "suggest"
+
+        elif next_step == "suggest":
+            session["outfit_suggestion"] = suggest_outfit(
+                session["selected_item"], session["wardrobe"]
+            )
+            next_step = "fit_card"
+
+        elif next_step == "fit_card":
+            session["fit_card"] = create_fit_card(
+                session["outfit_suggestion"], session["selected_item"]
+            )
+            next_step = "done"
+
     return session
 
 
