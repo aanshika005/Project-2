@@ -28,7 +28,7 @@ tool calls and returns a fit card — in at least 4 of 5 tries.
 <!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
      "my search is a plain keyword match and some phrasings will miss" is a
      real answer. -->
-
+Parsing and search are plain code, so a matching query always finds the same item. Each run then makes two Gemini calls, though, and on the free tier (15 requests a minute) a run can hit a rate limit that doesn't clear in time, or the model can fail to respond. I'm allowing one miss in five for that outside service, not for my own code.
 ---
 
 ## 2. An impossible query stops before the second tool
@@ -39,10 +39,10 @@ Given a query that matches no listings, the agent stops before calling
 **Why this target:**
 <!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
      about this path? -->
-
+This path never calls the model. Parsing, searching and the if not results check are all code that gives the same answer every time, so nothing random can make it fail. If it misses even once, my branch is broken, so anything less than 5 of 5 would hide a real bug.
 ---
 
-## 3. Something about state
+## 3. The item search found is the item every later tool receives
 
 <!-- YOU WRITE THIS ONE.
 
@@ -53,16 +53,15 @@ Given a query that matches no listings, the agent stops before calling
      look like state failure — it looks like a tool problem. Something that
      compares session["selected_item"] against what actually reached
      suggest_outfit is the shape you're after. -->
-
-
+Given a query that matches, the listing passed to suggest_outfit and create_fit_card has the same id as session["search_results"][0], and the fit card names that item's price and platform. 5 of 5 tries.
 
 **Why this target:**
-
+Passing the item is plain code: selected_item is copied from the first result and read back out of the session, with no model involved. So any mismatch is a state bug, and 5 of 5 is the only honest target. I check the id rather than the outfit text, because the model rewords titles and the text can't prove which item it received.
 
 
 ---
 
-## 4. Something about the fit card
+## 4. The fit card reads like a caption about the right item
 
 <!-- YOU WRITE THIS ONE.
 
@@ -74,16 +73,13 @@ Given a query that matches no listings, the agent stops before calling
      mentions the price? Two different items producing the same opening
      sentence? A card longer than a caption anyone would post? Any of those can
      be turned into a number. -->
-
-
+Across 5 different matching queries, at least 4 of the 5 fit cards are 2–4 sentences long and contain the listing's exact price (like $19) and its platform name. No two of the 5 cards open with the same first sentence.
 
 **Why this target:**
-
-
-
+The prompt asks for all of this, but at temperature 0.9 the model sometimes adds a sentence or writes the price as "19 bucks". That's why I set 4 of 5 rather than 5. The different-opening rule is there because if the cache or a low temperature were making every card read like a template, I'd want this criterion to catch it.
 ---
 
-## 5. Your choice
+## 5. Search never breaks its own filters
 
 <!-- YOU WRITE THIS ONE TOO.
 
@@ -91,13 +87,10 @@ Given a query that matches no listings, the agent stops before calling
      wardrobe path, what happens when the model can't be reached, whether the
      search respects a price ceiling — anything, as long as it names a number
      or an observable outcome. -->
-
-
+For 5 queries that include a max price and/or a size, every listing in search_results costs at most the max price and passes the size rule (whole-size match, so "S" never matches "US 9"). That means 0 violations across all 5 queries.
 
 **Why this target:**
-
-
-
+Filtering is plain code with no model, so even one item over the price is a bug, not bad luck. I picked this one because a filter that leaks (like showing shoes when someone asked for a small top) makes the whole agent look broken. Criterion 1 can't catch it, because a leaky search still "finds something".
 ---
 
 <!-- ─────────────────────────────────────────────────────────────────────────
