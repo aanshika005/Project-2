@@ -180,6 +180,51 @@ Declared before building. Each one is built in a later commit.
   `python app.py ask '...' --keep` adds the found item to it, and later runs
   load it automatically, so outfit suggestions can use items kept in earlier runs.
 
+### Evidence
+
+**Fourth tool called + second branch taken:** the top match was pricey, so
+the loop switched to a cheaper tee from the top 3 results in the same category.
+
+```
+$ python app.py ask 'graphic tee under $30'
+
+  Switched: top match Graphic Tee — 2003 Tour Bootleg Style ($24.0) was pricey for its category
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+  Price:    good deal: median $21.5 across 14 other tops, cheaper than 71%
+
+  Outfit:   Outfit one is all about that classic Y2K contrast. Pair the Y2K Baby Tee with your baggy straight-leg jeans, dark wash. Add your black cropped zip hoodie for a cool layering piece. Finish this look off with your chunky white sneakers and your black crossbody bag to keep it practical and cute. 
+
+Outfit two gives a softer, vintage-meets-streetwear vibe. Wear the Y2K Baby Tee tucked into your wide-leg khaki trousers, and cinch the waist using your brown leather belt. Throw on your vintage black denim jacket for an extra layer, and step into your black combat boots to ground the pastel butterfly print with some edge.
+
+  Fit card: Found this dreamy Y2K Baby Tee — Butterfly Print and I'm obsessed with the pastel colors. It's giving major nostalgic vibes and I'm listing it on depop for just $18. Grab it before I change my mind and keep it for myself! 🦋✨
+
+#y2kstyle #depopseller #babytee
+2 model calls this session, 558 prompt + 206 output tokens
+```
+
+**Branch not taken:** pricey, but no cheaper outerwear in the top 3, so it keeps the top match.
+
+```
+$ python app.py ask '90s leather bomber'
+
+  Found:    90s Leather Bomber — Black — $75.0 on depop
+  Price:    pricey: median $40 across 7 other outerwear, cheaper than 0%
+
+  Outfit:   Hey there! That 90s leather bomber is such a versatile find and will instantly level up your wardrobe. Here are two easy ways to style it using what you already own:
+
+Outfit 1: Edge it up. Pair the 90s Leather Bomber with your white ribbed tank top tucked into the baggy straight-leg jeans, dark wash. Slip on the chunky white sneakers and finish the look with the black crossbody bag for a classic, effortless 90s off-duty model vibe.
+
+Outfit 2: Play with textures. Layer the 90s Leather Bomber over the oversized grey crewneck sweatshirt, paired with the wide-leg khaki trousers. Ground the slouchy silhouette with your black combat boots for a cool, grungy contrast between the tough leather and soft knit. 
+
+You are going to wear this jacket on repeat!
+
+  Fit card: Found the ultimate 90s Leather Bomber on depop for $75 and I'm obsessed. Total off-duty model energy and it goes with literally everything. 
+
+#thriftfinds #vintageleather #depopshop
+
+2 model calls this session, 588 prompt + 220 output tokens
+```
+
 ---
 
 ## How I Used AI
