@@ -17,7 +17,7 @@ import re
 
 import config
 import trace
-from tools import search_listings, suggest_outfit, create_fit_card
+from tools import search_listings, suggest_outfit, create_fit_card, compare_prices
 from generate import ModelUnavailable
 
 
@@ -45,6 +45,8 @@ def new_session(query: str, wardrobe: dict) -> dict:
         "wardrobe": wardrobe,        # the user's wardrobe
         "outfit_suggestion": None,   # what suggest_outfit returned
         "fit_card": None,            # what create_fit_card returned
+        "price_check": None,         # what compare_prices returned (stretch)
+        "switched_from": None,       # the original top match, if the pricey branch swapped it
         "error": None,               # set when the run ended early
     }
 
@@ -196,6 +198,23 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         elif next_step == "select":
             session["selected_item"] = session["search_results"][0]   # best match
+            next_step = "compare"
+
+        elif next_step == "compare":
+            session["price_check"] = compare_prices(session["selected_item"])
+
+            # SECOND BRANCH: a pricey top match gets swapped for a cheaper one.
+            # Candidates must be in the top 3 matches AND the same category,
+            # so asking for a jacket never ends with a belt.
+            top = session["selected_item"]
+            cheaper = [
+                r for r in session["search_results"][1:3]
+                if r["price"] < top["price"] and r["category"] == top["category"]
+            ]
+            if session["price_check"]["verdict"] == "pricey" and cheaper:
+                session["switched_from"] = top
+                session["selected_item"] = min(cheaper, key=lambda r: r["price"])
+                session["price_check"] = compare_prices(session["selected_item"])
             next_step = "suggest"
 
         elif next_step == "suggest":

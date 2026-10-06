@@ -118,7 +118,16 @@ def _ask_one(query, wardrobe, use_trace):
         print(f"  {session['error']}")
     else:
         item = session["selected_item"] or {}
+        if session.get("switched_from"):
+            top = session["switched_from"]
+            print(f"  Switched: top match {top.get('title')} (${top.get('price')}) was pricey for its category")
         print(f"  Found:    {item.get('title')} — ${item.get('price')} on {item.get('platform')}")
+        check = session.get("price_check")
+        if check and check["compared_with"]:
+            print(f"  Price:    {check['verdict']}: median ${check['median']:g} across "
+                  f"{check['compared_with']} other {check['category']}, cheaper than {check['cheaper_than_pct']}%")
+        elif check:
+            print(f"  Price:    {check['verdict']}")
         print()
         print(f"  Outfit:   {session['outfit_suggestion']}")
         print()

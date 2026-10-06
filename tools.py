@@ -284,3 +284,63 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     if not response.strip():
         return f"Thrifted the {title} for {price_text} on {platform}. Styling post coming soon."
     return response.strip()
+
+
+# ── Tool 4 (stretch): compare_prices ─────────────────────────────────────────
+
+def compare_prices(item: dict, listings: list[dict] | None = None) -> dict:
+    """
+    Compare one listing's price against every other listing in its category.
+
+    Args:
+        item:     a listing dict (the item the agent selected).
+        listings: the listings to compare against. None loads all of them.
+
+    Returns:
+        A dict with:
+            price            (float) the item's price
+            category         (str)   the item's category
+            compared_with    (int)   how many other listings were compared
+            median           (float) median price of those listings
+            cheaper_than_pct (int)   % of them that cost more than this item
+            verdict          (str)   "good deal" / "about average" / "pricey"
+
+        With fewer than 3 other listings in the category it returns
+        compared_with 0, median None, cheaper_than_pct None and verdict
+        "not enough similar listings". Same if the item has no numeric price.
+        It never raises and never calls the model.
+    """
+    if listings is None:
+        listings = load_listings()
+
+    price = item.get("price")
+    category = item.get("category", "unknown")
+    not_enough = {"price": price, "category": category, "compared_with": 0,
+                  "median": None, "cheaper_than_pct": None,
+                  "verdict": "not enough similar listings"}
+    if not isinstance(price, (int, float)):       # nothing to compare
+        return not_enough
+    price = float(price)
+
+    others = [
+        float(l["price"]) for l in listings
+        if l.get("category") == category and l.get("id") != item.get("id")
+    ]
+
+    if len(others) < 3:
+        return not_enough
+
+    others.sort()
+    mid = len(others) // 2
+    median = others[mid] if len(others) % 2 else (others[mid - 1] + others[mid]) / 2
+    cheaper_than_pct = round(100 * sum(p > price for p in others) / len(others))
+
+    if price <= 0.85 * median:
+        verdict = "good deal"
+    elif price >= 1.15 * median:
+        verdict = "pricey"
+    else:
+        verdict = "about average"
+
+    return {"price": price, "category": category, "compared_with": len(others),
+            "median": median, "cheaper_than_pct": cheaper_than_pct, "verdict": verdict}

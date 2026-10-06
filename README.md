@@ -173,6 +173,9 @@ Declared before building. Each one is built in a later commit.
   "pricey" and another search result is cheaper, the loop switches
   `selected_item` to the cheapest of those and records the original in
   `session["switched_from"]`. Otherwise it keeps the top match.
+  *Built with one refinement:* candidates are limited to the **top 3 search
+  results in the same category** as the top match. Without that, a pricey
+  "90s Leather Bomber" got swapped for a leather belt.
 - **Style memory:** the wardrobe is saved to `data/saved_wardrobe.json`.
   `python app.py ask '...' --keep` adds the found item to it, and later runs
   load it automatically, so outfit suggestions can use items kept in earlier runs.
