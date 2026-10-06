@@ -199,15 +199,22 @@ def run_agent(query: str, wardrobe: dict) -> dict:
             next_step = "suggest"
 
         elif next_step == "suggest":
-            session["outfit_suggestion"] = suggest_outfit(
-                session["selected_item"], session["wardrobe"]
-            )
-            next_step = "fit_card"
+            try:
+                session["outfit_suggestion"] = suggest_outfit(
+                    session["selected_item"], session["wardrobe"]
+                )
+                next_step = "fit_card"
+            except ModelUnavailable as exc:    # bad key, no internet, still rate limited
+                session["error"] = f"Found an item, but couldn't get outfit ideas. {exc}"
+                next_step = "done"
 
         elif next_step == "fit_card":
-            session["fit_card"] = create_fit_card(
-                session["outfit_suggestion"], session["selected_item"]
-            )
+            try:
+                session["fit_card"] = create_fit_card(
+                    session["outfit_suggestion"], session["selected_item"]
+                )
+            except ModelUnavailable as exc:
+                session["error"] = f"Got outfit ideas, but couldn't write the fit card. {exc}"
             next_step = "done"
 
     return session

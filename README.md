@@ -170,15 +170,15 @@ Found my dream pair of Vintage Levi's 501 Jeans — Medium Wash and honestly I'm
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Claude to finish `search_listings` using the size-matching helpers I'd already started (`_keywords`, `_size_tokens`, `_size_matches`).
+- *What came back:* Before writing the function, it pointed out two bugs in my helpers. `re` was never imported, so every search would crash with a `NameError`. And `p.strip().upper` was missing its `()`, so it stored the method instead of the uppercase text, and size matching could never work. It also tested the finished function on a copy of my repo and explained that "boots size US 8" returning nothing was correct, because the only boots in the data are size US 8.5.
+- *What I changed:* I fixed both bugs, then asked it to explain each helper line by line, especially the parentheses regex `\([^)]*\)` and the scoring formula, so I understood the code before committing it. Seeing that bare numbers didn't match shoe sizes also shaped my parser later: `parse_query` turns "size 8" into "US 8".
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Claude to check whether my Milestone 2 spec was complete, using the milestone's own test: could someone else build each tool from what I wrote?
+- *What came back:* It compared my Tool Inventory against the actual code and found three gaps. My `search_listings` ranking said "ranks by keywords" without saying how. And both `suggest_outfit` and `create_fit_card` claimed they "never raise", which was false, because `generate()` raises `ModelUnavailable` when the model is unreachable.
+- *What I changed:* I added the exact scoring rule (title words worth 2 points, other fields 1, zero-score listings dropped, ties go to the cheaper item) and rewrote both "never raises" lines to name `ModelUnavailable`. Then I added a `ModelUnavailable` handler to `run_agent` so the README's claim that `run_agent` handles it is actually true. That showed me a spec can be wrong even when the code works.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
