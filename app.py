@@ -104,8 +104,9 @@ def cmd_examples(args):
     )
 
 
-def _ask_one(query, wardrobe, use_trace):
+def _ask_one(query, wardrobe, use_trace, keep=False):
     from agent import run_agent
+    from memory import keep_item, load_saved_wardrobe
     import trace as trace_module
 
     if use_trace:
@@ -132,6 +133,17 @@ def _ask_one(query, wardrobe, use_trace):
         print(f"  Outfit:   {session['outfit_suggestion']}")
         print()
         print(f"  Fit card: {session['fit_card']}")
+
+        if keep and session["selected_item"]:
+            # Add to what's already saved, so --empty-wardrobe --keep never wipes it
+            base = load_saved_wardrobe() or wardrobe
+            wardrobe, added = keep_item(base, session["selected_item"])
+            n = len(wardrobe["items"])
+            print()
+            if added:
+                print(f"  Kept:     {item.get('title')} — saved wardrobe now has {n} item{'s' if n != 1 else ''}")
+            else:
+                print(f"  Kept:     {item.get('title')} was already in your saved wardrobe")
     print()
 
     if use_trace:
@@ -141,20 +153,30 @@ def _ask_one(query, wardrobe, use_trace):
                 "  (--trace printed nothing. You haven't added trace.step() calls to\n"
                 "   run_agent() yet — that's unit 4, Milestone 2.)\n"
             )
-    return session
+    return session, wardrobe
 
 
 def cmd_ask(args):
     from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
     import generate
 
-    wardrobe = get_empty_wardrobe() if args.empty_wardrobe else get_example_wardrobe()
+    from memory import load_saved_wardrobe
+
     if args.empty_wardrobe:
-        print("(running with an empty wardrobe)")
+        wardrobe = get_empty_wardrobe()
+        print("(running with an empty wardrobe — saved wardrobe ignored)")
+    else:
+        saved = load_saved_wardrobe()
+        if saved is not None:
+            wardrobe = saved
+            n = len(saved["items"])
+            print(f"(using your saved wardrobe: {n} item{'s' if n != 1 else ''} in data/saved_wardrobe.json)")
+        else:
+            wardrobe = get_example_wardrobe()
 
     try:
         if args.query:
-            _ask_one(args.query, wardrobe, args.trace)
+            _ask_one(args.query, wardrobe, args.trace, args.keep)
         else:
             print("Ask for something, or press Enter on an empty line to quit.\n")
             while True:
@@ -165,9 +187,27 @@ def cmd_ask(args):
                     break
                 if not query:
                     break
-                _ask_one(query, wardrobe, args.trace)
+                _, wardrobe = _ask_one(query, wardrobe, args.trace, args.keep)
     finally:
         print(generate.usage())
+
+
+def cmd_wardrobe(args):
+    """Style memory: what the agent remembers between runs."""
+    from memory import load_saved_wardrobe, clear_saved_wardrobe
+
+    if args.clear:
+        print("Saved wardrobe deleted." if clear_saved_wardrobe() else "No saved wardrobe to delete.")
+        return
+
+    saved = load_saved_wardrobe()
+    if saved is None:
+        print("No saved wardrobe yet. Runs use the example wardrobe until you --keep something.")
+        return
+    n = len(saved["items"])
+    print(f"Saved wardrobe ({n} item{'s' if n != 1 else ''}):\n")
+    for piece in saved["items"]:
+        print(f"  {piece.get('category', ''):<12} {piece.get('name')}")
 
 
 def build_parser():
@@ -198,7 +238,16 @@ def build_parser():
         action="store_true",
         help="run as a user with nothing saved — one of unit 4's failure modes",
     )
+    p_ask.add_argument(
+        "--keep",
+        action="store_true",
+        help="save the found item to your wardrobe (data/saved_wardrobe.json) for later runs",
+    )
     p_ask.set_defaults(func=cmd_ask)
+
+    p_ward = sub.add_parser("wardrobe", help="show or clear your saved wardrobe")
+    p_ward.add_argument("--clear", action="store_true", help="delete the saved wardrobe")
+    p_ward.set_defaults(func=cmd_wardrobe)
 
     return parser
 
