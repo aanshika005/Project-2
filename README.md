@@ -41,8 +41,7 @@
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
 
-
-
+FitFindr is a command-line agent for secondhand shopping. You describe what you want in plain language, like `'vintage graphic tee under $30'` or `'platform sneakers size 8'`, and it pulls out the item, size and max price, then searches 40 thrift listings from Depop, ThredUp and Poshmark for the best match. It hands that item to the model, which suggests one or two outfits using pieces you already own (or general styling ideas if your wardrobe is empty), and then writes a short caption you could post about the find. If nothing matches, it stops before calling the model and tells you what to change, such as a higher price, a different size or other keywords.
 ---
 
 ## Tool Inventory
