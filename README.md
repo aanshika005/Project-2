@@ -59,7 +59,7 @@
 
 ### `search_listings`
 
-- **What it does:** Filters the 40 mock listings by optional price ceiling and size, then ranks what's left by how many keywords it shares with the description.
+- **What it does:** Filters the 40 mock listings by optional price ceiling and size, then ranks what's left by how many keywords it shares with the description. Search words in the title score 2 points each, and words found only in the description, category, style tags, colors or brand score 1. Listings scoring 0 are dropped, and ties go to the cheaper item.
 - **Inputs:** `description` (str, keywords like "vintage graphic tee"); `size` (str or None, e.g. "M"; matched case-insensitively against whole size tokens, so "M" matches "S/M" and "M/L" but not "US 9", and "One Size" listings match any size; None skips the size filter); `max_price` (float or None, US dollars, inclusive; None skips the price filter).
 - **Returns:** A `list[dict]` of at most `config.SEARCH_RESULT_LIMIT` (10) listings, best match first, each with `id` (str), `title` (str), `description` (str), `category` (str), `style_tags` (list[str]), `size` (str), `condition` (str), `price` (float), `colors` (list[str]), `brand` (str or None), `platform` (str: depop / thredUp / poshmark).
 - **When it has nothing:** Returns an empty list `[]`. Never None, never an exception. The loop checks for `[]` and stops before calling `suggest_outfit`.
@@ -69,14 +69,14 @@
 - **What it does:** Asks the model for one or two outfits built around the thrifted item, naming pieces the user already owns.
 - **Inputs:** `new_item` (dict, one listing dict from `search_listings`); `wardrobe` (dict with an `items` key holding a list of wardrobe item dicts; the list may be empty).
 - **Returns:** A non-empty `str` of outfit suggestions written in plain text, each pairing the new item with specific pieces from `wardrobe["items"]`.
-- **When it has nothing:** If `wardrobe["items"]` is empty, it still returns a non-empty `str` of general styling advice for the item (what kinds of pieces and colors pair with it). It never returns `""` or raises.
+- **When it has nothing:** If `wardrobe["items"]` is empty, it still returns a non-empty `str` of general styling advice for the item (what kinds of pieces and colors pair with it). It never returns `""`. If the model is unreachable, it raises `ModelUnavailable`, which `run_agent` handles.
 
 ### `create_fit_card`
 
 - **What it does:** Asks the model for a short, social-post-style caption about the find and the outfit.
 - **Inputs:** `outfit` (str, the text returned by `suggest_outfit`); `new_item` (dict, the same listing dict passed to `suggest_outfit`).
 - **Returns:** A `str` caption of two to four sentences that mentions the item's `title`, `price` and `platform` once each and describes the vibe. It varies between runs (TEMPERATURE 0.9).
-- **When it has nothing:** If `outfit` is empty or only whitespace, it returns the fixed string `"Can't write a fit card: no outfit suggestion was provided."` without calling the model. It never raises.
+- **When it has nothing:** If `outfit` is empty or only whitespace, it returns the fixed string `"Can't write a fit card: no outfit suggestion was provided."` without calling the model. If the model is unreachable, it raises `ModelUnavailable`, which `run_agent` handles.
 
 ---
 
