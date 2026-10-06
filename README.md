@@ -159,6 +159,26 @@ Found my dream pair of Vintage Levi's 501 Jeans — Medium Wash and honestly I'm
 
 ---
 
+## Stretch Features
+
+Declared before building. Each one is built in a later commit.
+
+- **Fourth tool — `compare_prices(item, listings)`:** compares the chosen item's
+  price against every other listing in the same category. Returns a dict with
+  `price`, `category`, `compared_with` (int), `median` (float),
+  `cheaper_than_pct` (int, 0–100) and `verdict` ("good deal" / "about average" /
+  "pricey"). With fewer than 3 other listings in the category it returns
+  `compared_with: 0` and `verdict: "not enough similar listings"`.
+- **Second branch — pricey top match:** after `compare_prices`, if the verdict is
+  "pricey" and another search result is cheaper, the loop switches
+  `selected_item` to the cheapest of those and records the original in
+  `session["switched_from"]`. Otherwise it keeps the top match.
+- **Style memory:** the wardrobe is saved to `data/saved_wardrobe.json`.
+  `python app.py ask '...' --keep` adds the found item to it, and later runs
+  load it automatically, so outfit suggestions can use items kept in earlier runs.
+
+---
+
 ## How I Used AI
 
 <!-- Two specific moments. What you asked, what came back, what you changed.
