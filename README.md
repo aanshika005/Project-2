@@ -225,6 +225,64 @@ You are going to wear this jacket on repeat!
 2 model calls this session, 588 prompt + 220 output tokens
 ```
 
+**Style memory, run 1 (stores):** an empty wardrobe, so the outfit is general advice. `--keep` saves the found tee.
+
+```
+$ python app.py ask 'graphic tee under $30' --empty-wardrobe --keep
+
+(running with an empty wardrobe — saved wardrobe ignored)
+
+  Switched: top match Graphic Tee — 2003 Tour Bootleg Style ($24.0) was pricey for its category
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+  Price:    good deal: median $21.5 across 14 other tops, cheaper than 71%
+
+  Outfit:   Hey there! That Y2K butterfly baby tee is such a fun find. Since it has those lovely pink and purple graphics on white, let us style it two ways.
+
+Outfit one leans into the vintage Y2K vibe. Pair the tee with low-rise medium-wash denim flare jeans. Add a small pink shoulder bag and white chunky platform sneakers to complete the look.
+
+Outfit two plays up the cottagecore crossover. Tuck the baby tee into a green floral print midi skirt. Layer a light cream cardigan over your shoulders and slip on some brown leather strappy sandals. 
+
+Both options are super wearable and let the tee shine! Which vibe feels more like you?
+
+  Fit card: Found this little Y2K butterfly baby tee and I am obsessed. It’s listed on my depop for just $18 and is giving total nostalgic spring energy. 🦋 #y2k #thrifted #babytee
+
+  Kept:     Y2K Baby Tee — Butterfly Print — saved wardrobe now has 1 item
+
+2 model calls this session, 402 prompt + 184 output tokens
+```
+
+**Style memory, run 2 (shaped by run 1):** no flags, so the agent loads the saved wardrobe. Both outfits are built around the Y2K Baby Tee kept in run 1.
+
+```
+$ python app.py ask 'baggy jeans'
+
+(using your saved wardrobe: 1 item in data/saved_wardrobe.json)
+
+  Switched: top match Baggy Carpenter Jeans — Dark Wash ($36.0) was pricey for its category
+  Found:    Straight Leg Black Jeans — Faded — $30.0 on thredUp
+  Price:    about average: median $30 across 9 other bottoms, cheaper than 44%
+
+  Outfit:   Hey there! You are going to get so much wear out of these Levi's. Since they have that cool, faded vintage wash, they are the ultimate grunge-meets-classic staple. 
+
+Outfit 1: Contrast and cute. Pair the faded black jeans with your Y2K Baby Tee — Butterfly Print. The pastel butterfly print adds a fun pop of pink and purple against the dark denim. Throw on chunky platform sneakers and a little black shoulder bag to lean into that effortless 2000s street style.
+
+Outfit 2: Monochromatic grunge. Tuck the Y2K Baby Tee — Butterfly Print right into the waistband of the jeans to define your shape. Add a beat-up leather jacket and some combat boots to really highlight the edgy, vintage vibe of the denim. Have fun styling them!
+
+  Fit card: scored these faded black levi's straight leg jeans on thredup for just $30 and the worn-in grunge vibe is unreal. already planning to wear them with a baby tee and beat-up combat boots all fall. 🖤👖
+
+#thriftfinds #levis #grungefashion
+
+2 model calls this session, 471 prompt + 227 output tokens
+```
+
+**Reset afterwards:**
+
+```
+$ python app.py wardrobe --clear
+
+Saved wardrobe deleted.
+```
+
 ---
 
 ## How I Used AI
