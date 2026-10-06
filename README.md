@@ -113,8 +113,21 @@
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
 
+  Found:    Vintage Band Tee — Faded Grey — $19.0 on depop
+
+  Outfit:   Hey there! That vintage band tee is a total closet staple and will fit right into your wardrobe. Here are two ways to style it using pieces you already own:
+
+Outfit 1: Effortless Streetwear
+Tuck the vintage band tee into your baggy straight-leg jeans, dark wash. Cinch your waist with the brown leather belt, and toss on your vintage black denim jacket (slightly cropped). Finish the look with your chunky white sneakers and the black crossbody bag for an easy, everyday vibe.
+
+Outfit 2: Grunge Contrast
+Pair the vintage band tee with your wide-leg khaki trousers for a cool mix of textures. Layer your black cropped zip hoodie open over top, and lace up your black combat boots to lean into that authentic 90s edge.
+
+  Fit card: Found this faded grey vintage band tee on depop for just $19 and the wash on it is so good. It has that perfectly worn-in 90s grunge feel that goes with everything. Grab it before I change my mind and keep it! 🖤🎸 #thrifted #bandtee #depop
+
+0 model calls this session, 2 served from cache
 ```
 
 **The three tools, tested one at a time**
@@ -122,16 +135,27 @@ $ python app.py ask '...'
 ```
 $ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
 
+[{'id': 'lst_006', 'title': 'Graphic Tee — 2003 Tour Bootleg Style', 'description': 'Vintage-style bootleg tee with faded graphic. Slightly boxy fit. 100% cotton, soft and worn-in.', 'category': 'tops', 'style_tags': ['graphic tee', 'vintage', 'grunge', 'streetwear', 'band tee'], 'size': 'L', 'condition': 'good', 'price': 24.0, 'colors': ['black'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_002', 'title': 'Y2K Baby Tee — Butterfly Print', 'description': 'Super cute early 2000s baby tee with butterfly graphic. Fitted crop length. Tag says medium but fits like a small.', 'category': 'tops', 'style_tags': ['y2k', 'vintage', 'graphic tee', 'cottagecore'], 'size': 'S/M', 'condition': 'excellent', 'price': 18.0, 'colors': ['white', 'pink', 'purple'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_033', 'title': 'Vintage Band Tee — Faded Grey', 'description': 'Faded grey band-style tee with distressed graphic. Crew neck. Fits boxy. Well-loved but no holes or major damage.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'band tee', 'graphic tee', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 19.0, 'colors': ['grey', 'charcoal'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_017', 'title': 'Mesh Long-Sleeve Top — Black', 'description': 'Sheer black mesh long-sleeve. Great for layering under a graphic tee or over a bralette. Stretchy material, fits true to size.', 'category': 'tops', 'style_tags': ['y2k', 'grunge', 'goth', 'layering'], 'size': 'S/M', 'condition': 'excellent', 'price': 15.0, 'colors': ['black'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_015', 'title': 'Vintage Graphic Hoodie — Faded Black', 'description': 'Faded black pullover hoodie with barely-visible vintage graphic on the chest. Cozy interior. Some pilling but adds to the worn-in look.', 'category': 'tops', 'style_tags': ['vintage', 'grunge', 'graphic', 'streetwear'], 'size': 'L', 'condition': 'fair', 'price': 26.0, 'colors': ['black', 'charcoal'], 'brand': None, 'platform': 'depop'}, {'id': 'lst_011', 'title': 'Low-Rise Cargo Pants — Khaki', 'description': 'Y2K era low-rise cargo pants. Lots of pockets. Khaki color, slightly distressed at the hems. Great for layering with a long tee.', 'category': 'bottoms', 'style_tags': ['y2k', 'cargo', '2000s', 'streetwear'], 'size': 'W29', 'condition': 'fair', 'price': 27.0, 'colors': ['khaki', 'tan'], 'brand': None, 'platform': 'poshmark'}]
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
 
+Hey! Those vintage Levi's 501 jeans are an absolute closet staple and will fit right in. Here is how you can style them using what you already own:
+
+Outfit 1:
+Tuck your white ribbed tank top into the Levi's 501 jeans. Add the brown leather belt, and finish with the chunky white sneakers and black crossbody bag. It is a classic, effortless look.
+
+Outfit 2:
+Pair the jeans with your black cropped zip hoodie and layer the vintage black denim jacket on top for a cool double-denim vibe. Step into your black combat boots to complete this edgy, streetwear-inspired outfit.
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
 
+Found my dream pair of Vintage Levi's 501 Jeans — Medium Wash and honestly I'm never taking them off. They have that perfect broken-in 90s streetwear vibe and I'm just planning to live in these with crisp white sneakers. Snagged them on depop for $38 which feels like an absolute steal. 👖✨
+
+#levis501 #vintagedenim #depopseller
 ```
 
 ---
