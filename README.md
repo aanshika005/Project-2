@@ -745,26 +745,56 @@ $ python app.py ask 'silk dress under $40'
 
      `python run_eval.py --label after` -->
 
-**What I changed:**
+**What I changed:** One prompt, in `tools.py::create_fit_card`. The system prompt now says the captions are "for someone who just BOUGHT a thrift find", written "in first person as the buyer", and that they should never say the item is listed, for sale or in your shop, or tell others to buy it. The user prompt now starts "I just bought this secondhand", and the data labels changed from `Price:` / `Platform:` to `Price I paid:` / `Bought on:`. Nothing else changed: no other tool, the loop, the temperature or the criteria. The change is its own commit ("Rewrite create_fit_card prompt"), made after the before-run was committed.
 
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** The seller-voice pattern from my diagnosis. 17 of 65 fit cards talked like the poster was selling the item (14 of 30 on depop), because the prompt never said who the poster was, and its `Price / Platform` block read like a sales listing.
 
 ### Run Log — After
 
+`python run_eval.py --label after` (`run_eval.py::main` → `agent.py::run_agent`): the same 15 scenarios, 5 tries each, caching off, temperature 0.9. Full log: `results/run_2026-10-13_1552_after.md`. Criteria 4 and 5 are judged the same way as before (Try *t* = the five queries' *t*-th runs).
+
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. A matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. An impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. The item search found is the item every later tool receives | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. The fit card reads like a caption about the right item | 4 of 5 cards per try, distinct openings | PASS | PASS | PASS | PASS* | PASS | MET (5/5) |
+| 5. Search never breaks its own filters | 0 violations | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
+\*In Try 4, only 4 of 5 cards passed: the slip dress card wrote its price as "thirty bucks" instead of "$30". That still meets the "≥4 of 5" target.
 
-<!-- If it made things worse, say that. Honestly reported, that earns full
-     credit and is more interesting than one that worked. -->
+**Before vs after, side by side**
 
+| Measure (same 15 scenarios × 5 tries) | Before | After |
+|---|---|---|
+| Criteria met | 5 of 5 | 5 of 5 |
+| Seller-voice fit cards | **17 of 65 (26%)** | **1 of 65 (2%)**, a false positive (see below) |
+| … on depop | 14 of 30 | 0 of 30 |
+| … on poshmark | 3 of 30 | 1 of 30 |
+| … on thredUp | 0 of 5 | 0 of 5 |
+| Cards missing the exact price or platform | 0 of 65 | 1 of 65 |
 
+**The same item before and after** (band tee, Try 1, from `tools.py::create_fit_card`):
+
+```
+BEFORE: Found the ultimate faded grey vintage band tee for just $19 and I'm obsessed with this grunge streetwear energy. It’s got that perfect lived-in wash that’s so hard to find. Just listed it on my depop so grab it before I change my mind 💀 
+
+#depop #vintagestyle #bandtee
+
+AFTER:  Scored this Vintage Band Tee — Faded Grey on depop for just $19 and I am obsessed. The fade is so good and it has that ultimate grunge streetwear vibe. 
+
+#vintagefashion #thrifted #bandtee
+```
+
+**The one regression** (slip dress, Try 4):
+
+```
+Scored this gorgeous 90s Silk Slip Dress — Floral, Midi Length on depop for only thirty bucks and I am obsessed. The grunge-femme cottagecore vibe is just too good. Styling it with chunky sneakers and an oversized crewneck for maximum 90s energy. 🌸✨
+
+#vintagefashion #90sstyle #thriftedstyle
+```
+
+**Did it help, and how do I know:** Yes. Seller-voice cards dropped from 17 of 65 to 1 of 65 (depop: 14/30 to 0/30), counted with the same definition on the same 15 scenarios × 5 tries. The one remaining match ("Score one for my Poshmark patience! Just snagged…") is written as a buyer, so on an actual read it's 0 of 65. All five criteria stayed MET. There was one small regression: one card wrote the price as "thirty bucks" instead of "$30", so cards missing the exact price went from 0 of 65 to 1 of 65. It still met criterion 4's "4 of 5" target, but it's the first criterion-4 card to fail in either run, and "Price I paid:" may invite that kind of casual phrasing. With a single case, I can't prove the new wording caused it.
 
 ---
 
