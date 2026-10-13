@@ -14,39 +14,54 @@ own criteria need — these are a starting point, not a fixed set.
 """
 
 SCENARIOS = [
-    {
-        # A query the data can match. Criterion 1.
-        "name": "matching query completes",
-        "query": "vintage graphic tee under $30",
-        "wardrobe": "example",
-        "criterion": 1,
-    },
-    {
-        # A query nothing can match. Criterion 2 — the branch.
-        "name": "impossible query stops early",
-        "query": "designer ballgown size XXS under $5",
-        "wardrobe": "example",
-        "criterion": 2,
-    },
-    {
-        # A user with nothing saved. One of unit 4's three failure modes.
-        "name": "empty wardrobe",
-        "query": "denim jacket under $50",
-        "wardrobe": "empty",
-        "criterion": None,
-    },
-    # TODO: add what your criteria 3, 4 and 5 need.
-    #
-    # Set "criterion" to the number in criteria.md that the scenario tests.
-    # "criterion": None means a diagnostic run — useful to have, but it isn't
-    # one of your five, and run_eval.py marks it as such in the table.
-    #
-    # For a state criterion, any normal query works — what you're checking is
-    # what ends up in the session, not what the user typed.
-    #
-    # For a fit-card criterion, you probably want the SAME query listed more
-    # than once, or several different items, depending on what your criterion
-    # actually says.
+    # ── Criterion 1: a matching query completes all three tools ──
+    {"name": "matching query completes", "query": "vintage graphic tee under $30",
+     "wardrobe": "example", "criterion": 1},
+
+    # ── Criterion 2: an impossible query stops before suggest_outfit ──
+    {"name": "impossible query stops early", "query": "designer ballgown size XXS under $5",
+     "wardrobe": "example", "criterion": 2},
+
+    # ── Criterion 3: the item search found is the item every later tool receives ──
+    # A normal query that doesn't trigger the pricey switch (see the revision
+    # note under criterion 3 in criteria.md).
+    {"name": "state: item flows through", "query": "90s windbreaker",
+     "wardrobe": "example", "criterion": 3},
+
+    # ── Criterion 4: fit cards across 5 DIFFERENT items ──
+    # Try t is judged across the five t-th runs together.
+    {"name": "fit card A: band tee", "query": "vintage band tee",
+     "wardrobe": "example", "criterion": 4},
+    {"name": "fit card B: track jacket", "query": "90s track jacket in size M",
+     "wardrobe": "example", "criterion": 4},
+    {"name": "fit card C: slip dress", "query": "silk slip dress",
+     "wardrobe": "example", "criterion": 4},
+    {"name": "fit card D: platform sneakers", "query": "platform sneakers size 8",
+     "wardrobe": "example", "criterion": 4},
+    {"name": "fit card E: denim jacket", "query": "denim jacket under $50",
+     "wardrobe": "example", "criterion": 4},
+
+    # ── Criterion 5: search never breaks its own filters (price and/or size) ──
+    # Try t is judged across the five t-th runs together.
+    {"name": "filters A: price only", "query": "graphic tee under $30",
+     "wardrobe": "example", "criterion": 5},
+    {"name": "filters B: size + price", "query": "top size S under $20",
+     "wardrobe": "example", "criterion": 5},
+    {"name": "filters C: price, outerwear", "query": "jacket under $45",
+     "wardrobe": "example", "criterion": 5},
+    {"name": "filters D: shoe size + price", "query": "sneakers size 9 under $50",
+     "wardrobe": "example", "criterion": 5},
+    {"name": "filters E: letter size + price", "query": "tee size L under $25",
+     "wardrobe": "example", "criterion": 5},
+
+    # ── Diagnostics (not one of the five) ──
+    # A user with nothing saved. One of unit 4's three failure modes.
+    {"name": "empty wardrobe", "query": "denim jacket under $50",
+     "wardrobe": "empty", "criterion": None},
+    # Known gap from unit 3: the Levi's are labelled "W30 L30", which a plain
+    # "W30" doesn't match.
+    {"name": "waist size W30 vs 'W30 L30'", "query": "jeans size W30",
+     "wardrobe": "example", "criterion": None},
 ]
 
 WARDROBES = ("example", "empty")

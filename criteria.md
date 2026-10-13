@@ -58,6 +58,20 @@ Given a query that matches, the listing passed to suggest_outfit and create_fit_
 **Why this target:**
 Passing the item is plain code: selected_item is copied from the first result and read back out of the session, with no model involved. So any mismatch is a state bug, and 5 of 5 is the only honest target. I check the id rather than the outfit text, because the model rewords titles and the text can't prove which item it received.
 
+> **Revised in unit 4:** Given a query that matches, the listing passed to
+> suggest_outfit and create_fit_card is the same listing as
+> session["selected_item"] (same id), and the fit card names that item's price
+> and platform. selected_item equals session["search_results"][0] unless the
+> pricey branch recorded a switch in session["switched_from"]. 5 of 5 tries.
+>
+> **Why revised:** I wrote the original before building my stretch second
+> branch. That branch deliberately swaps a pricey top match for a cheaper one
+> from the top 3, so whenever it fires, the original wording fails even though
+> the item is passed along correctly. That makes it unmeasurable as a state
+> check, not just unmet. The target stays 5 of 5. The unit 4 run uses a query
+> that doesn't trigger the switch, so the original wording is still tested
+> as written.
+
 
 ---
 
