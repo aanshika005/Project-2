@@ -338,7 +338,7 @@ Criteria 4 and 5 each say "5 different queries", so each has five scenarios (A�
 
 The model really was re-run each time: in every fit-card scenario, all 5 cards are different.
 
-**Was criterion 4 a real test?** Yes, even though it passed 25 of 25. Nothing in my code enforces any part of it. `tools.py::create_fit_card` only *asks* the model for 2–4 sentences, the exact price and the platform, then returns whatever comes back, at temperature 0.9 with caching off. Each card could fail in several independent ways: a fifth sentence, the price written as "19 bucks" or "about twenty dollars", the platform left out, or two of the five items opening with the same template sentence. The same run shows the model does drift from the prompt in ways it wasn't held to: 15 of 65 cards talk like the seller ("Just listed it on my depop"), and one hashtag came out garbled (`#9ᅩsstyle`). So the criterion could have caught a failure. It passed because the prompt states those three requirements explicitly, and the model followed them every time. What it doesn't measure is the card's *voice*, which is where the real failure turned out to be.
+**Was criterion 4 a real test?** Yes, even though it passed 25 of 25. Nothing in my code enforces any part of it. `tools.py::create_fit_card` only *asks* the model for 2–4 sentences, the exact price and the platform, then returns whatever comes back, at temperature 0.9 with caching off. Each card could fail in several independent ways: a fifth sentence, the price written as "19 bucks" or "about twenty dollars", the platform left out, or two of the five items opening with the same template sentence. The same run shows the model does drift from the prompt in ways it wasn't held to: 17 of 65 cards talk like the seller ("Just listed it on my depop"), and one hashtag came out garbled (`#9ᅩsstyle`). So the criterion could have caught a failure. It passed because the prompt states those three requirements explicitly, and the model followed them every time. What it doesn't measure is the card's *voice*, which is where the real failure turned out to be.
 
 **Real output from one try** (Try 1 of each criterion), as produced by `agent.py::run_agent`. The traces come from `trace.step()` calls inside it.
 
@@ -517,15 +517,40 @@ tee size L under $25  →  size='L', max_price=25.0
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | A matching query completes all three tools | 4 of 5 | **MET (5/5)** | All 5 tries finished with a fit card for the Vintage Band Tee. No try stopped early or crashed. |
+| 2 | An impossible query stops before the second tool | 5 of 5 | **MET (5/5)** | All 5 traces are 2 steps and end with `branch: empty, stopping before suggest_outfit`. There's no `suggest_outfit` step, `fit_card` is `None`, and the message names three things to change. |
+| 3 | The item search found is the item every later tool receives | 5 of 5 | **MET (5/5)** | In all 5 traces, the same title (Vintage Windbreaker — Color Block) is the first search result, `select`'s output, and the input to both `suggest_outfit` and `create_fit_card`. Titles are unique in the data, so that's one listing. Every card contains $40 and thredUp. |
+| 4 | The fit card reads like a caption about the right item | ≥4 of 5 cards per try, distinct openings | **MET (5/5)** | In each try, all 5 cards (one per item) were 2–4 sentences long and contained the exact price and platform, and no two shared an opening sentence. That's 25 of 25 cards. |
+| 5 | Search never breaks its own filters | 0 violations | **MET (5/5)** | In each try, all 5 queries returned the same result counts. Re-running `search_listings` on the same inputs listed every result: none over the max price, none in the wrong size. |
 
 **Diagnoses**
 
+**No criterion missed.** So there's no miss to diagnose, but the run still showed a real failure that my criteria weren't built to catch.
 
+**Were my targets too low?** Partly.
+
+- **Criteria 2, 3 and 5 test plain code** with no model involved, so 5 of 5 was the only honest target. They could only fail through a bug, and the bugs that existed (the missing `import re`, `.upper` without `()`) were fixed during the build.
+- **Criterion 1's 4 of 5** left room for one free-tier rate-limit failure. Pacing in `generate.py` handled that, so the allowance wasn't needed.
+- **Criteria 1 and 5 were also only run on queries I'd already checked would match.** The diagnostic `jeans size W30` returns nothing, even though Levi's 501s labelled `W30 L30` are in the data. `tools.py::_size_tokens` keeps "W30 L30" as one size, so a plain "W30" never matches it. That's a tool gap my criteria never tested.
+
+**The criterion I'd tighten: #4.** It checks the card's *format* (length, price, platform, openings), which the prompt states outright, so it passed 25 of 25. It doesn't check the card's *voice*, and that's where it actually fails:
+
+- **Where:** the model's output, from the prompt in `tools.py::create_fit_card`. The tool itself works.
+- **What happens:** 17 of 65 cards (26%) are written as if the poster is **selling** the item, not showing off something they bought: "it's officially live on my depop shop", "Just listed it on my depop", "Grab it before I change my mind and keep it for myself".
+- **The pattern, split by platform:**
+
+  | Platform | Seller-voice cards |
+  |---|---|
+  | depop | 14 of 30 (47%) |
+  | poshmark | 3 of 30 (10%) |
+  | thredUp | 0 of 5 |
+
+  That's one problem, not seventeen.
+- **Mechanism:** the prompt gives the model a block that looks like a sales listing (`Item: … / Price: … / Platform: …`) and asks for "a caption about this thrift find", but **never says the poster bought it**. The model fills that gap with each platform's usual voice. Depop is a peer-to-peer app where people run their own "depop shop", so it most often writes as a seller. thredUp is a store you buy from, so it never does.
+
+A tightened #4 would add: *"…and no card describes the item as listed, for sale or in the poster's shop."* I'm not changing the original criterion, because it wasn't broken: it measured exactly what it said it would. This is a gap, and it's the target for the improvement milestone.
+
+**How "seller voice" was counted:** a card counts if it says the item is listed, for sale or in the poster's shop ("listed", "listing", "my depop / my shop"), or urges others to buy it before the poster keeps it ("before I change my mind", "keep it for myself"). I applied that to all 65 fit cards in `results/run_2026-10-13_1456_before.md`.
 
 ---
 
