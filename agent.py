@@ -17,7 +17,8 @@ import re
 
 import config
 import trace
-from tools import search_listings, suggest_outfit, create_fit_card, compare_prices
+from tools import suggest_outfit, create_fit_card, compare_prices
+from mcp_client import call_tool, MCPError
 from generate import ModelUnavailable
 
 
@@ -186,9 +187,17 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         elif next_step == "search":
             p = session["parsed"]
-            session["search_results"] = search_listings(
-                p["description"], p["size"], p["max_price"]
-            )
+            try:
+                # search_listings now runs on the MCP server (mcp_server.py)
+                session["search_results"] = call_tool("search_listings", {
+                    "description": p["description"],
+                    "size": p["size"],
+                    "max_price": p["max_price"],
+                })
+            except MCPError as exc:            # server won't start, tool not registered, bad arguments
+                session["error"] = f"Couldn't search the listings. {exc}"
+                next_step = "done"
+                continue
             # THE BRANCH: decide the next step from what search returned
             if not session["search_results"]:
                 session["error"] = _no_results_message(p)
