@@ -265,15 +265,18 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     platform = new_item.get("platform", "a resale app")
 
     system = (
-        "You write short, casual social media captions about thrift finds. "
+        "You write short, casual social media captions for someone who just "
+        "BOUGHT a thrift find and is showing it off. Write in first person as "
+        "the buyer. Never say the item is listed, for sale or in your shop, and "
+        "never tell other people to buy it. "
         "Sound like a real person posting, not a product description. "
         "Plain text only."
     )
     prompt = (
-        f"Write a 2-4 sentence caption about this thrift find.\n\n"
+        f"I just bought this secondhand. Write a 2-4 sentence caption for my post about it.\n\n"
         f"Item: {_describe_item(new_item)}\n"
-        f"Price: {price_text}\n"
-        f"Platform: {platform}\n"
+        f"Price I paid: {price_text}\n"
+        f"Bought on: {platform}\n"
         f"How I'm styling it: {outfit.strip()}\n\n"
         f"Mention the item ({title}), the price ({price_text}) and the platform "
         f"({platform}) once each. Be specific about the vibe. "
