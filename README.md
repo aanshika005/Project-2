@@ -816,6 +816,23 @@ Scored this gorgeous 90s Silk Slip Dress — Floral, Midi Length on depop for on
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
 
+### Unit 4 Stretch Features
+
+Declared before building. Each one is built in a later commit, in this order.
+
+- **Second improvement — waist/length sizes:** `tools.py::_size_tokens` will also
+  split sizes like `W30 L30` on spaces, so a search for `W30` matches them. My
+  diagnosis named this gap (`jeans size W30` returns nothing). Measured the same
+  way: `python run_eval.py --label after2`, compared with the `after` run. The W30
+  diagnostic should find the Levi's 501s, and criterion 5 must stay at 0 violations.
+- **Second tool on MCP — `compare_prices`:** registered in `mcp_server.py` and
+  called from `agent.py::run_agent` through `mcp_client.call_tool`. It should return
+  the same dict as the direct call; the trace will show `compare_prices (via MCP)`.
+- **Retry with looser constraints:** when a search that included a size returns
+  `[]`, the loop retries once through MCP without the size. If that finds
+  something, it continues and says which filter it dropped (stored in
+  `session["dropped_filter"]`); if not, it stops as before.
+
 **No criterion is still missed.** All five were MET before and after the improvement. These are the problems I know about that my criteria don't catch, with what I'd do next and why I stopped:
 
 - **Combined waist and length sizes never match a waist-only search** (`tools.py::_size_tokens`). `jeans size W30` returns nothing, even though Levi's 501s labelled `W30 L30` are in the data, because "W30 L30" is kept as one size. *What I'd do:* split W/L sizes on spaces, so `W30` matches `W30 L30`, then add a scenario for it to criterion 5. *Why I stopped:* the milestone allowed one change, and the diagnosis pointed at the fit card, not this.
