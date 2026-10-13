@@ -385,24 +385,175 @@ that produced it:
      the same length, your branch isn't working — and this is the fastest way
      anyone will ever find that out. -->
 
-**Happy path**
+**Happy path:** 7 steps. The MCP call is step 2, and step 4 takes the second branch (pricey, so it switches to a cheaper top-3 match).
 
 ```
+$ python app.py ask 'graphic tee under $30' --trace
+
+[1] parse_query
+      in:  graphic tee under $30
+      out: description='graphic tee', size=None, max_price=30.0
+[2] search_listings (via MCP)
+      in:  description='graphic tee', size=None, max_price=30.0
+      out: 6 items: Graphic Tee — 2003 Tour Bootleg Style, Y2K Baby Tee — Butterfly Print, Vintage Band Tee — Faded Grey … +3 more
+      →    branch: found, continuing
+[3] select
+      out: Graphic Tee — 2003 Tour Bootleg Style ($24.0, depop)
+      →    top search result
+[4] compare_prices
+      in:  Graphic Tee — 2003 Tour Bootleg Style ($24.0, depop)
+      out: pricey (median $20.5 across 14 other tops)
+      →    branch: pricey, switching to a cheaper top-3 match
+[5] compare_prices
+      in:  Y2K Baby Tee — Butterfly Print ($18.0, depop)
+      out: good deal (median $21.5 across 14 other tops)
+      →    re-checked the new item
+[6] suggest_outfit
+      in:  Y2K Baby Tee — Butterfly Print + wardrobe of 10 items
+      out: Outfit one is all about that classic Y2K contrast. Pair the Y2K Baby Tee with your baggy straight-leg jeans, d…
+[7] create_fit_card
+      in:  Y2K Baby Tee — Butterfly Print
+      out: Found this dreamy Y2K Baby Tee — Butterfly Print and I'm obsessed with the pastel colors. It's giving major no…
+      →    done
+```
+
+**Empty search:** 2 steps. It stops right after the MCP search returns `[]`, before any model call.
 
 ```
+$ python app.py ask 'designer ballgown size XXS under $12' --trace
+
+[1] parse_query
+      in:  designer ballgown size XXS under $12
+      out: description='designer ballgown', size='XXS', max_price=12.0
+[2] search_listings (via MCP)
+      in:  description='designer ballgown', size='XXS', max_price=12.0
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+
+  No listings matched 'designer ballgown' in size XXS under $12. Try a different size, a higher max price or different keywords.
+
+0 model calls this session
+```
+
+**On the MCP move:** I moved `search_listings` onto MCP with FastMCP over stdio (`mcp_server.py`) and swapped the direct call in `agent.py::run_agent` for `mcp_client.call_tool`. `python mcp_client.py` shows the server offers the tool with the inputs from my Tool Inventory:
+
+```
+$ python mcp_client.py
+
+Asking mcp_server.py what it offers…
+
+  search_listings
+    Search 40 secondhand clothing listings (Depop, thredUp, Poshmark) by keywords,
+    with an optional size and an optional max price in US dollars (inclusive).
+    ...
+    - description: string
+    - size: string  (optional)
+    - max_price: number  (optional)
+```
+
+The same query returned the same top match as in Unit 3 (Vintage Band Tee, $19, depop), so nothing behaved differently, except that each search is slightly slower because it starts the server. The trace labels it `search_listings (via MCP)`. I added an `MCPError` handler so that if the server can't be reached, the agent stops with a message instead of crashing.
+
+### Failure Modes
+
+All three triggered on purpose. None crashed or went silent, so no new handlers were needed. The handlers live in `agent.py::run_agent` (empty search and `ModelUnavailable`) and `tools.py::suggest_outfit` (empty wardrobe).
+
+| Failure | How I triggered it | What the agent said | Handled? |
+|---|---|---|---|
+| Empty search | A query the data can't have | Stopped at step 2 and named what to change | Yes |
+| Empty wardrobe | `--empty-wardrobe` | General styling advice, no crash, no empty string | Yes |
+| Model unavailable | Changed one character of `GEMINI_API_KEY`, new query | Stopped at step 5, named the key as the problem and how to fix it | Yes |
 
 **Empty search**
 
 ```
+$ python app.py ask 'designer ballgown size XXS under $12'
 
+[1] parse_query
+      in:  designer ballgown size XXS under $12
+      out: description='designer ballgown', size='XXS', max_price=12.0
+[2] search_listings (via MCP)
+      in:  description='designer ballgown', size='XXS', max_price=12.0
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+
+  No listings matched 'designer ballgown' in size XXS under $12. Try a different size, a higher max price or different keywords.
+
+0 model calls this session
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+**Empty wardrobe**
 
+```
+$ python app.py ask 'denim jacket under $50' --empty-wardrobe
 
+(running with an empty wardrobe — saved wardrobe ignored)
+[1] parse_query
+      in:  denim jacket under $50
+      out: description='denim jacket', size=None, max_price=50.0
+[2] search_listings (via MCP)
+      in:  description='denim jacket', size=None, max_price=50.0
+      out: 7 items: Denim Jacket — Light Wash, Cropped, High-Waisted Denim Shorts — Cutoff, Denim Vest — Medium Wash, Studded … +4 more
+      →    branch: found, continuing
+[3] select
+      out: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      →    top search result
+[4] compare_prices
+      in:  Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[5] suggest_outfit
+      in:  Denim Jacket — Light Wash, Cropped + wardrobe of 0 items
+      out: Hey there! That Wrangler denim jacket is such a great find. Here are two easy, everyday outfits you can build …
+      →    empty wardrobe: general advice
+[6] create_fit_card
+      in:  Denim Jacket — Light Wash, Cropped
+      out: Obsessed with this vintage cropped Wrangler denim jacket I just listed on Poshmark. It has the absolute best 9…
+      →    done
+
+  Found:    Denim Jacket — Light Wash, Cropped — $42.0 on poshmark
+  Price:    about average: median $40 across 7 other outerwear, cheaper than 43%
+
+  Outfit:   Hey there! That Wrangler denim jacket is such a great find. Here are two easy, everyday outfits you can build with pieces you probably already own.
+
+Look one leans sporty and casual. Pair the jacket with a cozy grey marled hoodie underneath, some black high-waisted leggings or bike shorts, and chunky white sneakers. Toss on a canvas tote bag to finish the look.
+
+Look two is effortless and a little retro. Wear it over a simple ribbed white baby tee, tucked into straight-leg olive green cargo pants, and finished off with well-loved canvas low-top sneakers like Converse. Add a simple silver hoop earring to tie it all together.
+
+  Fit card: Obsessed with this vintage cropped Wrangler denim jacket I just listed on Poshmark. It has the absolute best 90s streetwear vibe and is only $42. Grab it before I change my mind and keep it for myself! 
+
+#ThriftFind #VintageDenim #PoshmarkStyle
+
+2 model calls this session, 396 prompt + 197 output tokens
+```
+
+**Model unavailable** (one character of the key changed; a new query, so nothing came from the cache)
+
+```
+$ python app.py ask 'silk dress under $40'
+
+[1] parse_query
+      in:  silk dress under $40
+      out: description='silk dress', size=None, max_price=40.0
+[2] search_listings (via MCP)
+      in:  description='silk dress', size=None, max_price=40.0
+      out: 2 items: 90s Silk Slip Dress — Floral, Midi Length, Silk Button-Down — Sage Green
+      →    branch: found, continuing
+[3] select
+      out: 90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      →    top search result
+[4] compare_prices
+      in:  90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      out: about average (median $30 across 9 other bottoms)
+      →    branch: keeping the top match
+[5] suggest_outfit
+      in:  90s Silk Slip Dress — Floral, Midi Length
+      out: ModelUnavailable
+      →    stopping: model unreachable
+
+  Found an item, but couldn't get outfit ideas. The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.
+
+1 model calls this session
+```
 
 ---
 

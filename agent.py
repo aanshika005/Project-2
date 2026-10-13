@@ -114,6 +114,17 @@ def _no_results_message(parsed: dict) -> str:
     return f"No listings matched {searched}{where}. Try {tip_text}."
 
 
+def _kv(d: dict) -> str:
+    """Show a small dict as readable text in the trace: key=value, key=value."""
+    return ", ".join(f"{k}={v!r}" for k, v in d.items())
+
+
+def _price_note(check: dict) -> str:
+    if not check["compared_with"]:
+        return check["verdict"]
+    return f"{check['verdict']} (median ${check['median']:g} across {check['compared_with']} other {check['category']})"
+
+
 # ── the loop ──────────────────────────────────────────────────────────────────
 
 def run_agent(query: str, wardrobe: dict) -> dict:
@@ -183,6 +194,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 
         if next_step == "parse":
             session["parsed"] = parse_query(query)
+            trace.step("parse_query", inputs=query, returned=_kv(session["parsed"]))
             next_step = "search"
 
         elif next_step == "search":
@@ -196,17 +208,24 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                 })
             except MCPError as exc:            # server won't start, tool not registered, bad arguments
                 session["error"] = f"Couldn't search the listings. {exc}"
+                trace.step("search_listings (via MCP)", inputs=_kv(p), returned="MCPError",
+                           note="stopping: search failed")
                 next_step = "done"
                 continue
             # THE BRANCH: decide the next step from what search returned
             if not session["search_results"]:
                 session["error"] = _no_results_message(p)
+                trace.step("search_listings (via MCP)", inputs=_kv(p), returned=[],
+                           note="branch: empty, stopping before suggest_outfit")
                 next_step = "done"             # stop: never call suggest_outfit with nothing
             else:
+                trace.step("search_listings (via MCP)", inputs=_kv(p),
+                           returned=session["search_results"], note="branch: found, continuing")
                 next_step = "select"
 
         elif next_step == "select":
             session["selected_item"] = session["search_results"][0]   # best match
+            trace.step("select", returned=session["selected_item"], note="top search result")
             next_step = "compare"
 
         elif next_step == "compare":
@@ -221,9 +240,16 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                 if r["price"] < top["price"] and r["category"] == top["category"]
             ]
             if session["price_check"]["verdict"] == "pricey" and cheaper:
+                trace.step("compare_prices", inputs=top, returned=_price_note(session["price_check"]),
+                           note="branch: pricey, switching to a cheaper top-3 match")
                 session["switched_from"] = top
                 session["selected_item"] = min(cheaper, key=lambda r: r["price"])
                 session["price_check"] = compare_prices(session["selected_item"])
+                trace.step("compare_prices", inputs=session["selected_item"],
+                           returned=_price_note(session["price_check"]), note="re-checked the new item")
+            else:
+                trace.step("compare_prices", inputs=top, returned=_price_note(session["price_check"]),
+                           note="branch: keeping the top match")
             next_step = "suggest"
 
         elif next_step == "suggest":
@@ -231,9 +257,16 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                 session["outfit_suggestion"] = suggest_outfit(
                     session["selected_item"], session["wardrobe"]
                 )
+                n_items = len((session["wardrobe"] or {}).get("items") or [])
+                trace.step("suggest_outfit",
+                           inputs=f"{session['selected_item']['title']} + wardrobe of {n_items} items",
+                           returned=session["outfit_suggestion"],
+                           note="empty wardrobe: general advice" if n_items == 0 else "")
                 next_step = "fit_card"
             except ModelUnavailable as exc:    # bad key, no internet, still rate limited
                 session["error"] = f"Found an item, but couldn't get outfit ideas. {exc}"
+                trace.step("suggest_outfit", inputs=session["selected_item"]["title"],
+                           returned="ModelUnavailable", note="stopping: model unreachable")
                 next_step = "done"
 
         elif next_step == "fit_card":
@@ -241,8 +274,12 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                 session["fit_card"] = create_fit_card(
                     session["outfit_suggestion"], session["selected_item"]
                 )
+                trace.step("create_fit_card", inputs=session["selected_item"]["title"],
+                           returned=session["fit_card"], note="done")
             except ModelUnavailable as exc:
                 session["error"] = f"Got outfit ideas, but couldn't write the fit card. {exc}"
+                trace.step("create_fit_card", inputs=session["selected_item"]["title"],
+                           returned="ModelUnavailable", note="stopping: model unreachable")
             next_step = "done"
 
     return session
