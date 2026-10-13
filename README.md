@@ -306,6 +306,18 @@ Saved wardrobe deleted.
 - *What came back:* It compared my Tool Inventory against the actual code and found three gaps. My `search_listings` ranking said "ranks by keywords" without saying how. And both `suggest_outfit` and `create_fit_card` claimed they "never raise", which was false, because `generate()` raises `ModelUnavailable` when the model is unreachable.
 - *What I changed:* I added the exact scoring rule (title words worth 2 points, other fields 1, zero-score listings dropped, ties go to the cheaper item) and rewrote both "never raises" lines to name `ModelUnavailable`. Then I added a `ModelUnavailable` handler to `run_agent` so the README's claim that `run_agent` handles it is actually true. That showed me a spec can be wrong even when the code works.
 
+**Moment 3 (Unit 4)**
+
+- *What I asked for:* I asked Claude to write `scenarios.py` for my five criteria.
+- *What came back:* Before writing them, it pointed out that criterion 3 conflicted with my stretch branch. Criterion 3 compares the item passed on with `search_results[0]`, but the pricey-match branch I built after writing it deliberately selects a different item. So the criterion would fail by design even when state works. It also pointed out that criteria 4 and 5 say "5 different queries", which one scenario run 5 times can't test.
+- *What I changed:* I added a "Revised in unit 4" note under criterion 3 in `criteria.md`, without editing the original, and committed it before running anything. I gave criteria 4 and 5 five scenarios each, judging Try *t* across the five *t*-th runs.
+
+**Moment 4 (Unit 4)**
+
+- *What I asked for:* I asked Claude to help me mark 15 scenarios × 5 tries from a 3,658-line results file.
+- *What came back:* It wrote a script to check each try. Its first check flagged criterion 2 as failing because the trace contained `suggest_outfit`, but that was the note text "stopping before suggest_outfit", not a real step. It also reported every criterion as passing, so I had it confirm the cards were really different across tries and show me actual cards rather than trusting its sentence counter.
+- *What I changed:* I made the criterion 2 check look for an actual `suggest_outfit` step. Reading the real cards is how I found the seller-voice problem, which became my improvement. I also fixed my seller-voice count from 15 to 17 of 65 once I'd settled on one written definition of what counts.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
@@ -804,7 +816,14 @@ Scored this gorgeous 90s Silk Slip Dress — Floral, Midi Length on depop for on
      you did. "I ran out of time" is fine if it's true. Pretending nothing is
      left is not. -->
 
+**No criterion is still missed.** All five were MET before and after the improvement. These are the problems I know about that my criteria don't catch, with what I'd do next and why I stopped:
 
+- **Combined waist and length sizes never match a waist-only search** (`tools.py::_size_tokens`). `jeans size W30` returns nothing, even though Levi's 501s labelled `W30 L30` are in the data, because "W30 L30" is kept as one size. *What I'd do:* split W/L sizes on spaces, so `W30` matches `W30 L30`, then add a scenario for it to criterion 5. *Why I stopped:* the milestone allowed one change, and the diagnosis pointed at the fit card, not this.
+- **The model invents wardrobe pieces** (`tools.py::suggest_outfit`, model output). In my style-memory run the saved wardrobe held only one item (the Y2K Baby Tee), yet the outfit added "chunky platform sneakers", "a beat-up leather jacket" and "combat boots", despite "Only use pieces from the list" in the prompt. *What I'd do:* write a criterion for it first (e.g. "every named piece is in `wardrobe['items']`"), then try a stricter prompt or check the output against the list. *Why I stopped:* no criterion measured it, so I couldn't fix it and measure it properly in one change.
+- **The price might be written in words** (`tools.py::create_fit_card`, model output). After my prompt change, 1 of 65 cards said "thirty bucks" instead of "$30". *What I'd do:* add "write the price exactly as shown, with the $ sign" to the prompt and re-run criterion 4. *Why I stopped:* it's one card, still within target, and changing the prompt again would blur the before/after comparison for this unit.
+- **Data labels skew the price check** (`data/listings.json`). The silk slip dress is labelled `bottoms`, so `compare_prices` judges it against jeans and skirts. *What I'd do:* fix the label, or add a `dresses` category. *Why I stopped:* it's a data problem, and the starter data is shared.
+- **"Tops" is too broad for the price switch** (`agent.py::run_agent`, the `compare` step). A pricey "Vintage Graphic Hoodie" can be swapped for a band tee, because both count as tops. *What I'd do:* also require one shared title keyword between the original and the swap. *Why I stopped:* it's a stretch feature, and none of my five criteria covered it.
+- **Keyword search can't tell what an item *is* from what it *mentions*.** "Corduroy jacket" returns corduroy pants first, and the mesh top ranks for "graphic tee" because its description mentions one. *What I'd do:* weight `category` matches more heavily, or match the category word against the query. *Why I stopped:* criteria 1 and 5 passed, so I had no measured miss to justify changing the ranking.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
