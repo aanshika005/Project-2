@@ -989,6 +989,23 @@ Layer the denim jacket right over your oversized grey crewneck sweatshirt, letti
 1 model calls this session, 1 served from cache, 314 prompt + 59 output tokens
 ```
 
+### Regression check: the original system still works
+
+On 2026-11-13, with the default `keyword` strategy: `python eval_retrieval.py --check-baseline` shows `keyword` identical to the pre-change snapshot on 42 of 42 cases, and `python run_eval.py --label regression` (15 scenarios × 5 tries, caching off) gives this against the five criteria in `criteria.md`. Full log: `results/run_2026-11-13_1300_regression.md`.
+
+| Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
+|---|---|---|---|---|---|---|---|
+| 1. A matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. An impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. The item search found is the item every later tool receives | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. The fit card reads like a caption about the right item | 4 of 5 cards per try, distinct openings | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Search never breaks its own filters | 0 violations | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+
+- **Nothing in the original system moved.** All 75 search steps and all 75 selected items are identical to the committed `after` run (`results/run_2026-10-13_1552_after.md`), step by step.
+- **13 of 75 tries stopped early, and all 13 are accounted for.** 5 are the impossible query (criterion 2, expected), 5 are `jeans size W30` (the known size gap, unchanged), and 3 are Gemini `503 UNAVAILABLE` errors: `filters C` try 3 at the outfit step, and `empty wardrobe` tries 3 and 5 at the fit card step. The `after` run had no 503s. In each case the search step had already succeeded and `run_agent` stopped with a readable message, the `ModelUnavailable` path working as designed. None of them touches a criterion: `filters C` only checks search, and `empty wardrobe` is a diagnostic.
+- **The fit card fix from Unit 4 held:** 0 of 62 cards read as the seller (same written definition as before), against 1 of 65 in the `after` run (a false positive).
+- **How the verdicts were decided:** I had a script apply each criterion's wording to every try (`eval/judge_run_log.py`). For criterion 5 it re-ran `retrieval.rank` with the same inputs (search calls no model) and checked every result against the price and size rule, and that the logged result counts match. Criterion 4 passed on all 25 cards, which are 2 to 4 sentences long (16 with 2, 8 with 3, 1 with 4). I then checked the verdicts against the log.
+
 ### Run path (Path B)
 
 `python eval_retrieval.py` from the repo root. Python 3.10+, standard library only, no model files. The command and its flags are in [RUNNING.md](RUNNING.md). Run records are in `results/retrieval_*.jsonl`.
