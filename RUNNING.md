@@ -237,6 +237,47 @@ error, what you ran, and what you expected.
 
 ---
 
+## Extension: category-aware search (Path B — local, with logs)
+
+`search_listings` has a second retrieval strategy. `keyword` is the original
+scoring and is still the default. `category` ranks listings of the garment type
+the query names first ("corduroy jacket" puts jackets ahead of corduroy pants)
+and lets a broad word like "pants" reach jeans and trousers.
+
+**The one command that proves it works** (run it from the repo root):
+
+```bash
+python eval_retrieval.py
+```
+
+It needs **Python 3.10 or newer and nothing else**: standard library only, no
+`pip install`, no `.env`, no API key, no network, no model files (nothing to
+download; the data is `data/listings.json`, 19 KB). It ranks 35 hand-labeled
+queries with both strategies, prints the tables, and writes a run record to
+`results/retrieval_<date>_<time>.jsonl` (one JSON object per line: environment,
+every query's ranked ids and scores, per-query metrics, timings, a summary) and
+a `.md` copy of the tables. It takes about two seconds.
+
+The full agent (outfit + fit card) needs the course environment from the top of
+this file: Python 3.11–3.13, the packages pinned in `requirements.txt`
+(`google-genai`, `mcp>=1,<2`, `python-dotenv`, `flask`, `gunicorn`), and a
+`GEMINI_API_KEY` in `.env`. With that:
+
+```bash
+python app.py ask 'corduroy jacket' --strategy category --trace
+```
+
+| Command | What it does |
+|---|---|
+| `python eval_retrieval.py` | Compare both strategies on all labeled queries; write the run record |
+| `python eval_retrieval.py --label after` | Same, with a name in the file name |
+| `python eval_retrieval.py --check-baseline` | Check that `keyword` still returns exactly what it did before the change (42 saved cases). Exit code 1 if not |
+| `python eval_retrieval.py --query 'pants' [--size M] [--max-price 40]` | One query, both strategies side by side, with scores |
+| `python eval_retrieval.py --no-log` | Print the tables without writing files |
+| `python app.py ask '...' --strategy category` | Run the whole agent with the new strategy (`keyword` is the default) |
+
+---
+
 ## A note on committing
 
 At least four new commits in unit 3, at least four more in unit 4. Your commit

@@ -840,7 +840,7 @@ Declared before building. Each one is built in a later commit, in this order.
 - **The price might be written in words** (`tools.py::create_fit_card`, model output). After my prompt change, 1 of 65 cards said "thirty bucks" instead of "$30". *What I'd do:* add "write the price exactly as shown, with the $ sign" to the prompt and re-run criterion 4. *Why I stopped:* it's one card, still within target, and changing the prompt again would blur the before/after comparison for this unit.
 - **Data labels skew the price check** (`data/listings.json`). The silk slip dress is labelled `bottoms`, so `compare_prices` judges it against jeans and skirts. *What I'd do:* fix the label, or add a `dresses` category. *Why I stopped:* it's a data problem, and the starter data is shared.
 - **"Tops" is too broad for the price switch** (`agent.py::run_agent`, the `compare` step). A pricey "Vintage Graphic Hoodie" can be swapped for a band tee, because both count as tops. *What I'd do:* also require one shared title keyword between the original and the swap. *Why I stopped:* it's a stretch feature, and none of my five criteria covered it.
-- **Keyword search can't tell what an item *is* from what it *mentions*.** "Corduroy jacket" returns corduroy pants first, and the mesh top ranks for "graphic tee" because its description mentions one. *What I'd do:* weight `category` matches more heavily, or match the category word against the query. *Why I stopped:* criteria 1 and 5 passed, so I had no measured miss to justify changing the ranking.
+- **Keyword search can't tell what an item *is* from what it *mentions*.** "Corduroy jacket" returns corduroy pants first, and the mesh top ranks for "graphic tee" because its description mentions one. *What I'd do:* weight `category` matches more heavily, or match the category word against the query. *Why I stopped:* criteria 1 and 5 passed, so I had no measured miss to justify changing the ranking. **Update: addressed for garment types by the extension below (`--strategy category`); the modifier half of it ('linen pants' still returns cargo pants first) is not.**
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
@@ -875,6 +875,107 @@ Declared before building. Each one is built in a later commit, in this order.
      Do not delete and recreate this repository. Your commit history is what
      shows your criteria existed before your results did.
      ═════════════════════════════════════════════════════════════════════ -->
+
+---
+
+## Extension: Category-Aware Retrieval
+
+**Shape C: one new capability, with evidence.** `search_listings` gets a second retrieval strategy, chosen with a new `strategy` input (`"keyword"` is the default, so nothing that worked before changes). The README's own "What's Still Broken" listed the reason: keyword scoring can't tell what an item *is* from what it *mentions*, so "corduroy jacket" returned corduroy pants first.
+
+### What it does
+
+- **Where:** `retrieval.py` (new, standard library only). `tools.py::search_listings`, `mcp_server.py::search_listings`, `agent.py::run_agent` and `app.py ask --strategy` pass the choice through.
+- **How:** `category` uses the same price/size filters and the same keyword score as before. It adds a garment-type step: 22 small "families" (tee, shirt, sweatshirt, jacket, blazer, jeans, pants, trousers, shorts, dress, sneakers, boots, bag, hat, belt, and a few generic ones like "shoes" and "tops") each list the query words that name them, the head nouns that appear in listing **titles**, and a category. A listing whose title names the type is an exact match (2); one that is only in the right category is a weak match (1). Ranking is exact type first, then keyword score, then cheaper. A query that names no garment type ("something cozy and knit", "vintage grunge") ranks exactly like `keyword`.
+- **Two behaviours worth knowing:** an exact type match is kept even with a keyword score of 0, so "pants" now reaches jeans and trousers, which share no word with it. And direction matters: "pants" reaches jeans, "trousers" does not.
+- **Contract:** returns the same list of listing dicts as before; `strategy` outside `keyword`/`category` raises `ValueError` naming the valid choices; an unrecognised or empty description still returns `[]`.
+
+### How I measured it
+
+- **Labels first.** 35 queries with hand-labeled relevant listing ids, written by reading `data/listings.json` and committed as `eval/retrieval_*.json` with the rubric inside. 21 are a **held-out** set (`eval/retrieval_heldout.json`), written first; 14 are a **dev** set (`eval/retrieval_dev.json`), written second, including the failure the README already named. Both sets were written before any strategy code existed, and I made no change to the strategy after seeing any result, so neither set was used for tuning.
+- **Metrics (retrieval only, no model):** top-1 correct; MRR; recall@3 (relevant found in the top 3, out of min(3, how many exist)); mean count of wrong items in the top 3; whether a no-match query still returns `[]`.
+- **Keyword is unchanged.** `python eval_retrieval.py --check-baseline` compares `strategy="keyword"` with a snapshot of the pre-change `search_listings` output (git `2f194b9`): **42 of 42 cases identical.**
+
+### Result (run record: `results/retrieval_2026-11-13_1930_run2.jsonl`, repeated in `..._1929_run1.jsonl`)
+
+| Set | Strategy | Top-1 correct | MRR | Recall@3 | Wrong in top 3 (mean) |
+|---|---|---|---|---|---|
+| Dev (13 ranked, written second) | keyword | 77% (10/13) | 0.87 | 95% | 0.92 |
+| Dev | category | 100% (13/13) | 1.00 | 100% | 0.85 |
+| Held-out (21, written first) | keyword | 86% (18/21) | 0.87 | 84% | 0.62 |
+| Held-out | category | 95% (20/21) | 0.97 | 98% | 0.48 |
+
+Both strategies return `[]` for the no-match control ("designer ballgown"). Top-1 changed on 5 queries, all for the better, and on none for the worse:
+
+| Query | keyword top-1 | category top-1 |
+|---|---|---|
+| corduroy jacket | Corduroy Wide-Leg Pants | Denim Jacket |
+| brown leather bag | Leather Belt | Mini Shoulder Bag |
+| green jacket | Vintage Polo Shirt | Shacket |
+| t-shirt | Vintage Polo Shirt | Y2K Baby Tee |
+| purse | nothing | Mini Shoulder Bag |
+
+Recall@3 also improved where top-1 was already right: "pants" and "sweatshirt" return 2 and 1 results under `keyword` and 7 and 3 under `category`. Cost: median search time 0.58 ms to 0.66 ms in that run (it includes reading `listings.json`; the added work is negligible, and absolute times vary by machine).
+
+### What I would not claim
+
+- **The held-out set is not an independent test.** I wrote the queries and the garment lexicon, so I knew every word in both ("purse", "t-shirt", "button up shirt" are in the lexicon because they are in the queries), and I ran three held-out queries (pants, t-shirt, button up shirt) in a smoke test of the new code. The held-out gain is two queries (t-shirt, purse). With 21 queries that is a direction, not a statistic. A fair next check is 5 to 10 queries someone else writes against `eval/retrieval_*.json`.
+- **One held-out miss remains and I left it.** "linen pants" still returns Low-Rise Cargo Pants first (the labeled answer is the linen trousers) under both strategies: cargo pants and linen trousers are both exact "pants" matches, and the cargo pants win the tie on price because "linen" only scores 2. The fix I'd try is counting a type synonym ("trousers" for "pants") as a keyword hit, but I have already seen this query, so it needs fresh queries to validate.
+- **Wrong-type items still appear lower in the list.** The strategy re-orders; it does not filter, so "corduroy jacket" still lists the corduroy pants at position 6.
+- **Labels are my judgment** (a blazer is not a jacket; jeans are pants). The rubric and a note per query are in the JSON.
+- **The slip dress is filed under `bottoms` in the data**, so the dress family has no category fallback.
+
+### What was verified, and where
+
+- Verified: `python eval_retrieval.py` and `--check-baseline` on Python 3.10.12 and 3.13.18 (same ranked ids on both, sha `78d83e324a8a57f3`); `mcp_server.search_listings` with and without `strategy`, and the `ValueError`; `run_agent(..., strategy="category")` sends the strategy to search and shows it in the trace (`strategy='category'`), with the MCP transport replaced by a direct call.
+- **Verified on my own machine, 2026-11-13:** the real MCP round trip and a full agent session with model calls, in the project's `.venv` with the pinned packages (see "Full session" below). The first environment could not do this: it had MCP 2.x installed while `requirements.txt` pins `<2`, and it had no API key or network.
+
+### Full session
+
+`python app.py ask 'corduroy jacket' --strategy category --trace`, run on my machine on 2026-11-13. Step 2 is the real MCP server receiving `strategy='category'`; step 3 picks a jacket where `strategy=keyword` picks the Corduroy Wide-Leg Pants (see "Result" above). The usage line says "1 served from cache" because caching is on outside the eval runs.
+
+```
+$ python app.py ask 'corduroy jacket' --strategy category --trace
+
+[1] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[2] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='category'
+      out: 6 items: Denim Jacket — Light Wash, Cropped, 90s Track Jacket — Navy/White Stripe, Shacket — Olive Canvas … +3 more
+      →    branch: found, continuing
+[3] select
+      out: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      →    top search result
+[4] compare_prices
+      in:  Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[5] suggest_outfit
+      in:  Denim Jacket — Light Wash, Cropped + wardrobe of 10 items
+      out: Outfit 1: Pair your new Wrangler denim jacket with the white ribbed tank top tucked into your baggy straight-l…
+[6] create_fit_card
+      in:  Denim Jacket — Light Wash, Cropped
+      out: Scored this vintage cropped light wash Wrangler denim jacket on Poshmark for just $42 and I'm obsessed. Such a…
+      →    done
+
+  Found:    Denim Jacket — Light Wash, Cropped — $42.0 on poshmark
+  Price:    about average: median $40 across 7 other outerwear, cheaper than 43%
+
+  Outfit:   Outfit 1:
+Pair your new Wrangler denim jacket with the white ribbed tank top tucked into your baggy straight-leg jeans, dark wash. Add the brown leather belt, black crossbody bag, and finish with your chunky white sneakers for a fresh, casual look that plays with double denim and contrasting washes.
+
+Outfit 2:
+Layer the denim jacket right over your oversized grey crewneck sweatshirt, letting the hem peek out from the cropped bottom. Pair this with your wide-leg khaki trousers and black combat boots for an effortless, streetwear-inspired mix of vintage textures and relaxed tailoring.
+
+  Fit card: Scored this vintage cropped light wash Wrangler denim jacket on Poshmark for just $42 and I'm obsessed. Such an easy piece to throw over a baggy crewneck or a ribbed tank for that effortless streetwear vibe. #thriftfind #denimstyle #secondhandstyle 🧥
+
+1 model calls this session, 1 served from cache, 314 prompt + 59 output tokens
+```
+
+### Run path (Path B)
+
+`python eval_retrieval.py` from the repo root. Python 3.10+, standard library only, no model files. The command and its flags are in [RUNNING.md](RUNNING.md). Run records are in `results/retrieval_*.jsonl`.
+
 
 ---
 
