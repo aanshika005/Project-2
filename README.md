@@ -878,6 +878,23 @@ Declared before building. Each one is built in a later commit, in this order.
 
 ---
 
+## The Shape
+
+**System:** FitFindr, my Project 2 agent (keyword search over 40 thrift listings, then outfit suggestions and a fit card from the model). I know its weak points from building and testing it, and one of them is already written down in "What's Still Broken": search can't tell what an item *is* from what it *mentions*.
+
+**Shape: C, extend one capability.** I'm adding one capability to `search_listings`: a second retrieval strategy, `category`, chosen with a `strategy` input (`keyword` stays the default and its behaviour must not change). When a query names a garment type ("jacket", "pants", "purse"), `category` ranks listings of that type first, so "corduroy jacket" stops returning corduroy pants. **The claim I'll be held to:** on 35 hand-labeled queries, `category` finds the right item at the top more often than `keyword`, never does worse on a query that `keyword` got right, and `keyword` still returns exactly what it did before.
+
+**Out of scope (things I considered and decided not to do):**
+- **A model-based retriever (embeddings).** It would need model files, which breaks the standard-library-only run path and is a different project.
+- **Fixing the other search gaps I already know about:** `W30` not matching `W30 L30`, and modifier words like "linen" losing to the garment type ("linen pants" still returns cargo pants first). They are separate fixes and each needs its own measurement.
+- **Making `category` the default, or changing the loop, the outfit prompt, the fit card or the price-switch branch.** The extension is opt-in (`--strategy category`) so the existing five criteria keep meaning what they meant.
+
+**Size check:** the capability is one change, a ranking step in one new file (`retrieval.py`). Around it are two pieces of supporting work that serve the same claim and are not extra features: passing `strategy` through `tools.py`, `mcp_server.py`, `agent.py` and `app.py`, and the labeled queries plus an eval script that produce the evidence. That is the top of the size limit. If I had to cut, the first thing to go would be the MCP pass-through.
+
+**When this was written:** after the build, not before it. I started building before writing this section, so it records the scope I actually kept, not a plan that was checked in advance. The commit history shows the order: the labeled queries were committed before the strategy code.
+
+---
+
 ## Extension: Category-Aware Retrieval
 
 **Shape C: one new capability, with evidence.** `search_listings` gets a second retrieval strategy, chosen with a new `strategy` input (`"keyword"` is the default, so nothing that worked before changes). The README's own "What's Still Broken" listed the reason: keyword scoring can't tell what an item *is* from what it *mentions*, so "corduroy jacket" returned corduroy pants first.
