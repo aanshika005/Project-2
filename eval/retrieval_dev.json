@@ -1,0 +1,200 @@
+{
+ "version": 1,
+ "rubric": "A listing is 'relevant' to a query when its garment type is, in everyday usage, a kind of the noun asked for AND any colour/material/size/price words in the query do not contradict it. Labels were written by reading data/listings.json, not by running any search. Where the data has no exact match (e.g. 'corduroy jacket'), any item of the right garment type is an acceptable fallback and a wrong-type item is not.",
+ "queries": [
+  {
+   "id": "D01",
+   "split": "dev",
+   "query": "corduroy jacket",
+   "description": "corduroy jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_004",
+    "lst_007",
+    "lst_010",
+    "lst_022",
+    "lst_032"
+   ],
+   "expect_empty": false,
+   "note": "known failure in README: returns corduroy pants first. No corduroy jacket exists; any jacket is an acceptable fallback"
+  },
+  {
+   "id": "D02",
+   "split": "dev",
+   "query": "denim jacket",
+   "description": "denim jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_007"
+   ],
+   "expect_empty": false,
+   "note": "denim vest, shorts and jeans are not jackets"
+  },
+  {
+   "id": "D03",
+   "split": "dev",
+   "query": "tee size L under $25",
+   "description": "tee",
+   "size": "L",
+   "max_price": 25.0,
+   "relevant": [
+    "lst_006",
+    "lst_033"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "D04",
+   "split": "dev",
+   "query": "vintage band tee",
+   "description": "vintage band tee",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_033",
+    "lst_006"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "D05",
+   "split": "dev",
+   "query": "platform shoes",
+   "description": "platform shoes",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_009",
+    "lst_019"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "D06",
+   "split": "dev",
+   "query": "trousers",
+   "description": "trousers",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_005",
+    "lst_011",
+    "lst_021",
+    "lst_025"
+   ],
+   "expect_empty": false,
+   "note": "trousers = pants; jeans not included here"
+  },
+  {
+   "id": "D07",
+   "split": "dev",
+   "query": "cargo",
+   "description": "cargo",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_011"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "D08",
+   "split": "dev",
+   "query": "long sleeve top",
+   "description": "long sleeve top",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_017",
+    "lst_020",
+    "lst_040",
+    "lst_029"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "D09",
+   "split": "dev",
+   "query": "silk dress",
+   "description": "silk dress",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_013"
+   ],
+   "expect_empty": false,
+   "note": "silk button-down is not a dress"
+  },
+  {
+   "id": "D10",
+   "split": "dev",
+   "query": "denim shorts",
+   "description": "denim shorts",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_016"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "D11",
+   "split": "dev",
+   "query": "brown leather bag",
+   "description": "brown leather bag",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_039"
+   ],
+   "expect_empty": false,
+   "note": "brown leather belt is not a bag"
+  },
+  {
+   "id": "D12",
+   "split": "dev",
+   "query": "green jacket",
+   "description": "green jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_032"
+   ],
+   "expect_empty": false,
+   "note": "green velvet blazer excluded: blazer is not a jacket in this rubric"
+  },
+  {
+   "id": "D13",
+   "split": "dev",
+   "query": "plaid",
+   "description": "plaid",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_003",
+    "lst_034"
+   ],
+   "expect_empty": false,
+   "note": "control: no garment type"
+  },
+  {
+   "id": "D14",
+   "split": "dev",
+   "query": "designer ballgown",
+   "description": "designer ballgown",
+   "size": null,
+   "max_price": null,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "control: nothing in the data; both strategies should return []"
+  }
+ ]
+}

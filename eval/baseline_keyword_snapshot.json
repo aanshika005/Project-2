@@ -1,0 +1,494 @@
+{
+ "note": "Output of search_listings as of git HEAD (2f194b9), before the strategy parameter existed. eval_retrieval.py --check-baseline asserts strategy='keyword' still returns exactly these.",
+ "git_head": "2f194b9",
+ "cases": [
+  {
+   "id": "H01",
+   "description": "pants",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_011",
+    "lst_005"
+   ]
+  },
+  {
+   "id": "H02",
+   "description": "linen pants",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_011",
+    "lst_005",
+    "lst_025",
+    "lst_018"
+   ]
+  },
+  {
+   "id": "H03",
+   "description": "black jeans",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_037",
+    "lst_026",
+    "lst_017",
+    "lst_003",
+    "lst_015",
+    "lst_031",
+    "lst_001",
+    "lst_009",
+    "lst_022",
+    "lst_006"
+   ]
+  },
+  {
+   "id": "H04",
+   "description": "t-shirt",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_024",
+    "lst_003",
+    "lst_032"
+   ]
+  },
+  {
+   "id": "H05",
+   "description": "something cozy and knit",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_008",
+    "lst_030",
+    "lst_015"
+   ]
+  },
+  {
+   "id": "H06",
+   "description": "leather jacket",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_022",
+    "lst_014",
+    "lst_039",
+    "lst_007",
+    "lst_004",
+    "lst_032",
+    "lst_009"
+   ]
+  },
+  {
+   "id": "H07",
+   "description": "olive jacket",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_032",
+    "lst_021",
+    "lst_007",
+    "lst_004",
+    "lst_022"
+   ]
+  },
+  {
+   "id": "H08",
+   "description": "boots",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_028"
+   ]
+  },
+  {
+   "id": "H09",
+   "description": "shoes",
+   "size": null,
+   "max_price": 25.0,
+   "ids": [
+    "lst_035"
+   ]
+  },
+  {
+   "id": "H10",
+   "description": "purse",
+   "size": null,
+   "max_price": null,
+   "ids": []
+  },
+  {
+   "id": "H11",
+   "description": "hat",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_034"
+   ]
+  },
+  {
+   "id": "H12",
+   "description": "button up shirt",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_024",
+    "lst_003",
+    "lst_029",
+    "lst_032",
+    "lst_014",
+    "lst_020",
+    "lst_018"
+   ]
+  },
+  {
+   "id": "H13",
+   "description": "sweatshirt",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_012"
+   ]
+  },
+  {
+   "id": "H14",
+   "description": "shorts",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_026",
+    "lst_016"
+   ]
+  },
+  {
+   "id": "H15",
+   "description": "blazer",
+   "size": null,
+   "max_price": 40.0,
+   "ids": [
+    "lst_018"
+   ]
+  },
+  {
+   "id": "H16",
+   "description": "jacket",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_007",
+    "lst_004",
+    "lst_032",
+    "lst_022"
+   ]
+  },
+  {
+   "id": "H17",
+   "description": "slip dress",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_013"
+   ]
+  },
+  {
+   "id": "H18",
+   "description": "graphic tee",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_006",
+    "lst_002",
+    "lst_033",
+    "lst_017",
+    "lst_015",
+    "lst_011"
+   ]
+  },
+  {
+   "id": "H19",
+   "description": "sneakers",
+   "size": "US 8",
+   "max_price": null,
+   "ids": [
+    "lst_019"
+   ]
+  },
+  {
+   "id": "H20",
+   "description": "vintage grunge",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_033",
+    "lst_015",
+    "lst_024",
+    "lst_012",
+    "lst_003",
+    "lst_006",
+    "lst_030",
+    "lst_038",
+    "lst_037",
+    "lst_001"
+   ]
+  },
+  {
+   "id": "H21",
+   "description": "mary janes",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_009"
+   ]
+  },
+  {
+   "id": "D01",
+   "description": "corduroy jacket",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_005",
+    "lst_007",
+    "lst_004",
+    "lst_032",
+    "lst_022"
+   ]
+  },
+  {
+   "id": "D02",
+   "description": "denim jacket",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_007",
+    "lst_016",
+    "lst_038",
+    "lst_004",
+    "lst_037",
+    "lst_032",
+    "lst_001",
+    "lst_022"
+   ]
+  },
+  {
+   "id": "D03",
+   "description": "tee",
+   "size": "L",
+   "max_price": 25.0,
+   "ids": [
+    "lst_033",
+    "lst_006"
+   ]
+  },
+  {
+   "id": "D04",
+   "description": "vintage band tee",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_033",
+    "lst_006",
+    "lst_002",
+    "lst_024",
+    "lst_012",
+    "lst_030",
+    "lst_015",
+    "lst_001",
+    "lst_018",
+    "lst_010"
+   ]
+  },
+  {
+   "id": "D05",
+   "description": "platform shoes",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_019",
+    "lst_009",
+    "lst_035",
+    "lst_028"
+   ]
+  },
+  {
+   "id": "D06",
+   "description": "trousers",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_021",
+    "lst_025"
+   ]
+  },
+  {
+   "id": "D07",
+   "description": "cargo",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_011"
+   ]
+  },
+  {
+   "id": "D08",
+   "description": "long sleeve top",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_017",
+    "lst_020",
+    "lst_040",
+    "lst_035",
+    "lst_023",
+    "lst_029",
+    "lst_024",
+    "lst_011"
+   ]
+  },
+  {
+   "id": "D09",
+   "description": "silk dress",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_013",
+    "lst_029"
+   ]
+  },
+  {
+   "id": "D10",
+   "description": "denim shorts",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_016",
+    "lst_026",
+    "lst_038",
+    "lst_007",
+    "lst_037",
+    "lst_001"
+   ]
+  },
+  {
+   "id": "D11",
+   "description": "brown leather bag",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_014",
+    "lst_039",
+    "lst_034",
+    "lst_030",
+    "lst_008",
+    "lst_022",
+    "lst_009"
+   ]
+  },
+  {
+   "id": "D12",
+   "description": "green jacket",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_024",
+    "lst_029",
+    "lst_032",
+    "lst_007",
+    "lst_004",
+    "lst_036",
+    "lst_021",
+    "lst_013",
+    "lst_022"
+   ]
+  },
+  {
+   "id": "D13",
+   "description": "plaid",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_034",
+    "lst_003"
+   ]
+  },
+  {
+   "id": "D14",
+   "description": "designer ballgown",
+   "size": null,
+   "max_price": null,
+   "ids": []
+  },
+  {
+   "id": "X01",
+   "description": "graphic tee",
+   "size": null,
+   "max_price": 30.0,
+   "ids": [
+    "lst_006",
+    "lst_002",
+    "lst_033",
+    "lst_017",
+    "lst_015",
+    "lst_011"
+   ]
+  },
+  {
+   "id": "X02",
+   "description": "top",
+   "size": "S",
+   "max_price": 20.0,
+   "ids": [
+    "lst_017"
+   ]
+  },
+  {
+   "id": "X03",
+   "description": "jacket",
+   "size": null,
+   "max_price": 45.0,
+   "ids": [
+    "lst_007",
+    "lst_004",
+    "lst_032"
+   ]
+  },
+  {
+   "id": "X04",
+   "description": "sneakers",
+   "size": "US 9",
+   "max_price": 50.0,
+   "ids": [
+    "lst_035"
+   ]
+  },
+  {
+   "id": "X05",
+   "description": "jeans",
+   "size": "W30",
+   "max_price": null,
+   "ids": []
+  },
+  {
+   "id": "X06",
+   "description": "",
+   "size": null,
+   "max_price": null,
+   "ids": []
+  },
+  {
+   "id": "X07",
+   "description": "90s windbreaker",
+   "size": null,
+   "max_price": null,
+   "ids": [
+    "lst_010",
+    "lst_013",
+    "lst_004",
+    "lst_022",
+    "lst_034",
+    "lst_031",
+    "lst_019",
+    "lst_009"
+   ]
+  }
+ ]
+}

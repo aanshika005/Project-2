@@ -1,0 +1,305 @@
+{
+ "version": 1,
+ "rubric": "A listing is 'relevant' to a query when its garment type is, in everyday usage, a kind of the noun asked for AND any colour/material/size/price words in the query do not contradict it. Labels were written by reading data/listings.json, not by running any search. Where the data has no exact match (e.g. 'corduroy jacket'), any item of the right garment type is an acceptable fallback and a wrong-type item is not.",
+ "queries": [
+  {
+   "id": "H01",
+   "split": "heldout",
+   "query": "pants",
+   "description": "pants",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_005",
+    "lst_011",
+    "lst_021",
+    "lst_025",
+    "lst_001",
+    "lst_031",
+    "lst_037"
+   ],
+   "expect_empty": false,
+   "note": "jeans count as pants"
+  },
+  {
+   "id": "H02",
+   "split": "heldout",
+   "query": "linen pants",
+   "description": "linen pants",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_025"
+   ],
+   "expect_empty": false,
+   "note": "linen blazer is not pants"
+  },
+  {
+   "id": "H03",
+   "split": "heldout",
+   "query": "black jeans",
+   "description": "black jeans",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_037"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H04",
+   "split": "heldout",
+   "query": "t-shirt",
+   "description": "t-shirt",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_002",
+    "lst_006",
+    "lst_033"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H05",
+   "split": "heldout",
+   "query": "something cozy and knit",
+   "description": "something cozy and knit",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_008",
+    "lst_030"
+   ],
+   "expect_empty": false,
+   "note": "control: names no garment type"
+  },
+  {
+   "id": "H06",
+   "split": "heldout",
+   "query": "leather jacket",
+   "description": "leather jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_022"
+   ],
+   "expect_empty": false,
+   "note": "leather belt / bag are not jackets"
+  },
+  {
+   "id": "H07",
+   "split": "heldout",
+   "query": "olive jacket",
+   "description": "olive jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_032"
+   ],
+   "expect_empty": false,
+   "note": "olive trousers are not a jacket"
+  },
+  {
+   "id": "H08",
+   "split": "heldout",
+   "query": "boots",
+   "description": "boots",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_028"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H09",
+   "split": "heldout",
+   "query": "shoes under $25",
+   "description": "shoes",
+   "size": null,
+   "max_price": 25.0,
+   "relevant": [
+    "lst_035"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H10",
+   "split": "heldout",
+   "query": "purse",
+   "description": "purse",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_039"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H11",
+   "split": "heldout",
+   "query": "hat",
+   "description": "hat",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_034"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H12",
+   "split": "heldout",
+   "query": "button up shirt",
+   "description": "button up shirt",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_003",
+    "lst_024",
+    "lst_029"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H13",
+   "split": "heldout",
+   "query": "sweatshirt",
+   "description": "sweatshirt",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_012",
+    "lst_027",
+    "lst_015"
+   ],
+   "expect_empty": false,
+   "note": "hoodie is a hooded sweatshirt"
+  },
+  {
+   "id": "H14",
+   "split": "heldout",
+   "query": "shorts",
+   "description": "shorts",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_016",
+    "lst_026"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H15",
+   "split": "heldout",
+   "query": "blazer under $40",
+   "description": "blazer",
+   "size": null,
+   "max_price": 40.0,
+   "relevant": [
+    "lst_018"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H16",
+   "split": "heldout",
+   "query": "jacket",
+   "description": "jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_004",
+    "lst_007",
+    "lst_010",
+    "lst_022",
+    "lst_032"
+   ],
+   "expect_empty": false,
+   "note": "bomber, windbreaker, shacket are jackets; blazers and vest are not"
+  },
+  {
+   "id": "H17",
+   "split": "heldout",
+   "query": "slip dress",
+   "description": "slip dress",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_013"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H18",
+   "split": "heldout",
+   "query": "graphic tee",
+   "description": "graphic tee",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_002",
+    "lst_006",
+    "lst_033"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H19",
+   "split": "heldout",
+   "query": "sneakers size 8",
+   "description": "sneakers",
+   "size": "US 8",
+   "max_price": null,
+   "relevant": [
+    "lst_019"
+   ],
+   "expect_empty": false,
+   "note": ""
+  },
+  {
+   "id": "H20",
+   "split": "heldout",
+   "query": "vintage grunge",
+   "description": "vintage grunge",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_003",
+    "lst_006",
+    "lst_015",
+    "lst_022",
+    "lst_033",
+    "lst_037",
+    "lst_038"
+   ],
+   "expect_empty": false,
+   "note": "control: style words only, tagged vintage AND grunge"
+  },
+  {
+   "id": "H21",
+   "split": "heldout",
+   "query": "mary janes",
+   "description": "mary janes",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_009"
+   ],
+   "expect_empty": false,
+   "note": "control: exact title words"
+  }
+ ]
+}
