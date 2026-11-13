@@ -74,6 +74,7 @@ def search_listings(
     description: str,
     size: str | None = None,
     max_price: float | None = None,
+    strategy: str = "keyword",
 ) -> list[dict]:
     """
     Search 40 secondhand clothing listings (Depop, thredUp, Poshmark) by keywords,
@@ -83,8 +84,13 @@ def search_listings(
     first, each with id, title, description, category, style_tags, size,
     condition, price, colors, brand (often null) and platform. Returns an empty
     list when nothing matches.
+
+    strategy is "keyword" (default) or "category". "category" ranks listings of
+    the garment type named in the description first ("jacket" puts jackets ahead
+    of other items that merely mention one) and lets a broad word such as "pants"
+    reach jeans and trousers. Any other value is an error.
     """
-    return _search_listings_impl(description, size, max_price)
+    return _search_listings_impl(description, size, max_price, strategy)
 
 # ──────────────────────────────────────────────────────────────────────────────
 #

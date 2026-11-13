@@ -28,32 +28,18 @@ from utils.data_loader import load_listings
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
-_STOPWORDS = {
-    "a", "an", "and", "the", "for", "with", "under", "over", "in", "of"
-}
-
-
-def _keywords(text: str) -> set[str]:
-    words = re.findall(r"[a-z0-9']+", (text or "").lower())
-    return {w for w in words if w not in _STOPWORDS and len(w) > 1}
-
-def _size_tokens(size: str) -> set[str]:
-    cleaned = re.sub(r"\([^)]*\)", " ", size or "") #drop parentheticals
-    parts = [p.strip().upper() for p in cleaned.split("/")]
-    return {p for p in parts if p}
-
-def _size_matches(wanted: str, listing_size: str) -> bool:
-    if not wanted:
-        return True
-    listing_tokens = _size_tokens(listing_size)
-    if any(token.startswith("ONE SIZE") for token in listing_tokens):
-        return True
-    return bool(_size_tokens(wanted) & listing_tokens)
+# Ranking lives in retrieval.py (standard library only, so the retrieval eval can
+# run without an API key). The helpers are re-exported for anything that imported
+# them from here.
+from retrieval import (  # noqa: E402,F401
+    STRATEGIES, rank, _keywords, _size_tokens, _size_matches,
+)
 
 def search_listings(
     description: str,
     size: str | None = None,
     max_price: float | None = None,
+    strategy: str = "keyword",
 ) -> list[dict]:
     """
     Search the listings data for items matching a description, and optionally a
@@ -76,6 +62,11 @@ def search_listings(
                      What counts as a size match is part of your spec — decide
                      it and write it into your Tool Inventory.
         max_price:   maximum price, inclusive, or None to skip price filtering.
+        strategy:    how to rank what's left — "keyword" (default, the original
+                     scoring) or "category" (same scoring, but listings of the
+                     garment type the query names rank first, and a broad word
+                     like "pants" also reaches jeans and trousers). Anything
+                     else raises ValueError naming the valid choices.
 
     Returns:
         A list of matching listing dicts, best match first.
@@ -101,36 +92,9 @@ def search_listings(
     Test it from a terminal before you move on:
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
-    listings = load_listings()
-    wanted = _keywords(description)
-
-    scored = []
-    for item in listings:
-        # 1. Hard filters: price and size
-        if max_price is not None and item["price"] > max_price:
-            continue
-        if not _size_matches(size, item["size"]):
-            continue
-
-        # 2. Score by keyword overlap. Title words count double.
-        title_words = _keywords(item["title"])
-        other_text = " ".join([
-            item["description"],
-            item["category"],
-            " ".join(item["style_tags"]),
-            " ".join(item["colors"]),
-            item["brand"] or "",          # brand is often None
-        ])
-        other_words = _keywords(other_text)
-        score = 2 * len(wanted & title_words) + len(wanted & (other_words - title_words))
-
-        # 3. Drop anything with no overlap
-        if score > 0:
-            scored.append((score, item))
-
-    # 4. Best first; cheaper wins a tie
-    scored.sort(key=lambda pair: (-pair[0], pair[1]["price"]))
-    return [item for _, item in scored[: config.SEARCH_RESULT_LIMIT]]
+    ranked = rank(description, size, max_price, strategy=strategy,
+                  limit=config.SEARCH_RESULT_LIMIT)
+    return [r["item"] for r in ranked]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────

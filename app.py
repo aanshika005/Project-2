@@ -104,7 +104,7 @@ def cmd_examples(args):
     )
 
 
-def _ask_one(query, wardrobe, use_trace, keep=False):
+def _ask_one(query, wardrobe, use_trace, keep=False, strategy="keyword"):
     from agent import run_agent
     from memory import keep_item, load_saved_wardrobe
     import trace as trace_module
@@ -112,7 +112,7 @@ def _ask_one(query, wardrobe, use_trace, keep=False):
     if use_trace:
         trace_module.start_trace()
 
-    session = run_agent(query, wardrobe)
+    session = run_agent(query, wardrobe, strategy=strategy)
 
     print()
     if session["error"]:
@@ -176,7 +176,7 @@ def cmd_ask(args):
 
     try:
         if args.query:
-            _ask_one(args.query, wardrobe, args.trace, args.keep)
+            _ask_one(args.query, wardrobe, args.trace, args.keep, args.strategy)
         else:
             print("Ask for something, or press Enter on an empty line to quit.\n")
             while True:
@@ -187,7 +187,7 @@ def cmd_ask(args):
                     break
                 if not query:
                     break
-                _, wardrobe = _ask_one(query, wardrobe, args.trace, args.keep)
+                _, wardrobe = _ask_one(query, wardrobe, args.trace, args.keep, args.strategy)
     finally:
         print(generate.usage())
 
@@ -242,6 +242,12 @@ def build_parser():
         "--keep",
         action="store_true",
         help="save the found item to your wardrobe (data/saved_wardrobe.json) for later runs",
+    )
+    p_ask.add_argument(
+        "--strategy",
+        choices=["keyword", "category"],
+        default="keyword",
+        help="how search ranks results: keyword (default) or category (garment type first)",
     )
     p_ask.set_defaults(func=cmd_ask)
 

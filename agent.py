@@ -48,6 +48,7 @@ def new_session(query: str, wardrobe: dict) -> dict:
         "fit_card": None,            # what create_fit_card returned
         "price_check": None,         # what compare_prices returned (stretch)
         "switched_from": None,       # the original top match, if the pricey branch swapped it
+        "strategy": "keyword",       # which retrieval strategy search used
         "error": None,               # set when the run ended early
     }
 
@@ -114,6 +115,11 @@ def _no_results_message(parsed: dict) -> str:
     return f"No listings matched {searched}{where}. Try {tip_text}."
 
 
+def _search_inputs(parsed: dict, strategy: str) -> str:
+    """Trace text for the search step; names the strategy only when it isn't the default."""
+    return _kv(parsed) if strategy == "keyword" else _kv({**parsed, "strategy": strategy})
+
+
 def _kv(d: dict) -> str:
     """Show a small dict as readable text in the trace: key=value, key=value."""
     return ", ".join(f"{k}={v!r}" for k, v in d.items())
@@ -127,7 +133,7 @@ def _price_note(check: dict) -> str:
 
 # ── the loop ──────────────────────────────────────────────────────────────────
 
-def run_agent(query: str, wardrobe: dict) -> dict:
+def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
     """
     Run the loop once and return the finished session.
 
@@ -136,6 +142,8 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                   (e.g. "vintage graphic tee under $30, size M").
         wardrobe: a wardrobe dict — get_example_wardrobe() or
                   get_empty_wardrobe() from utils/data_loader.py.
+        strategy: retrieval strategy for the search step, "keyword" (the
+                  default) or "category" — see retrieval.py.
 
     Returns:
         The session dict. **Check session["error"] first** — if it isn't None,
@@ -184,6 +192,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         than a stack trace. The import is already at the top of this file.
     """
     session = new_session(query, wardrobe)
+    session["strategy"] = strategy
 
     next_step = "parse"
     count = 0
@@ -205,21 +214,22 @@ def run_agent(query: str, wardrobe: dict) -> dict:
                     "description": p["description"],
                     "size": p["size"],
                     "max_price": p["max_price"],
+                    "strategy": strategy,
                 })
             except MCPError as exc:            # server won't start, tool not registered, bad arguments
                 session["error"] = f"Couldn't search the listings. {exc}"
-                trace.step("search_listings (via MCP)", inputs=_kv(p), returned="MCPError",
+                trace.step("search_listings (via MCP)", inputs=_search_inputs(p, strategy), returned="MCPError",
                            note="stopping: search failed")
                 next_step = "done"
                 continue
             # THE BRANCH: decide the next step from what search returned
             if not session["search_results"]:
                 session["error"] = _no_results_message(p)
-                trace.step("search_listings (via MCP)", inputs=_kv(p), returned=[],
+                trace.step("search_listings (via MCP)", inputs=_search_inputs(p, strategy), returned=[],
                            note="branch: empty, stopping before suggest_outfit")
                 next_step = "done"             # stop: never call suggest_outfit with nothing
             else:
-                trace.step("search_listings (via MCP)", inputs=_kv(p),
+                trace.step("search_listings (via MCP)", inputs=_search_inputs(p, strategy),
                            returned=session["search_results"], note="branch: found, continuing")
                 next_step = "select"
 
