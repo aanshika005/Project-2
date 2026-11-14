@@ -29,6 +29,7 @@ os.environ["AI201_CACHE"] = "0"          # before config is imported: every mode
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "results" / "capstone"
+P = ""                                   # file-name prefix; --tag after gives after_trial1.json etc.
 FIELDS = {"ts", "run_id", "entrypoint", "query", "strategy", "parsed", "wardrobe_items", "outcome",
           "error", "n_results", "selected", "switched_from", "price_verdict", "fit_card_chars",
           "duration_ms", "step_ms", "wait_ms", "model_calls", "cache_hits", "prompt_tokens",
@@ -90,7 +91,7 @@ def c3(trial):
     import runlog
     from agent import run_agent
     from utils.data_loader import get_example_wardrobe
-    path = fresh_log(ROOT / "logs" / f"capstone_trial{trial}_c3.jsonl")
+    path = fresh_log(ROOT / "logs" / f"{P}capstone_trial{trial}_c3.jsonl")
     head(3, "bad inputs to the new strategy stop cleanly")
     cases = [("corduroy jacket", "semantic", True), ("corduroy jacket", "", True),
              ("corduroy jacket", "CATEGORY", True), ("", "category", False), ("   ", "category", False)]
@@ -121,7 +122,7 @@ def c3(trial):
 def c4(trial):
     from agent import run_agent
     from utils.data_loader import get_example_wardrobe
-    path = fresh_log(ROOT / "logs" / f"capstone_trial{trial}_c4.jsonl")
+    path = fresh_log(ROOT / "logs" / f"{P}capstone_trial{trial}_c4.jsonl")
     head(4, "10 category runs, each completed run makes exactly 2 model calls")
     for i in range(10):
         run_agent(C4_QUERIES[i % 5], get_example_wardrobe(), strategy="category")
@@ -138,7 +139,7 @@ def c5(trial):
     import generate
     from agent import run_agent
     from utils.data_loader import get_example_wardrobe
-    path = fresh_log(ROOT / "logs" / f"capstone_trial{trial}_c5.jsonl")
+    path = fresh_log(ROOT / "logs" / f"{P}capstone_trial{trial}_c5.jsonl")
     head(5, "20 mixed runs each leave exactly one valid record")
     plan = []
     for i in range(8):
@@ -185,7 +186,7 @@ def c5(trial):
 
 
 def table():
-    trials = [json.loads((OUT / f"trial{i}.json").read_text()) for i in (1, 2, 3)]
+    trials = [json.loads((OUT / f"{P}trial{i}.json").read_text()) for i in (1, 2, 3)]
     rows = [
         ("1. category finds the right garment first (fresh set)", lambda t: f"{t['c1']['need']} of {t['c1']['n']}",
          lambda t: f"{t['c1']['hit']}/{t['c1']['n']}", lambda t: t["c1"]["hit"] >= t["c1"]["need"]),
@@ -205,7 +206,7 @@ def table():
         L.append(f"| {name} | {target(trials[0])} | " + " | ".join(show(t) for t in trials) + f" | {verdict} |")
     text = "\n".join(L) + "\n"
     print(text)
-    (OUT / "run_log.md").write_text(text)
+    (OUT / f"{P}run_log.md").write_text(text)
     return 0
 
 
@@ -213,7 +214,10 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--trial", type=int, choices=(1, 2, 3))
     p.add_argument("--table", action="store_true")
+    p.add_argument("--tag", default="", help="prefix for output files, e.g. after")
     a = p.parse_args()
+    global P
+    P = f"{a.tag}_" if a.tag else ""
     if a.table:
         return table()
     if not a.trial:
@@ -223,9 +227,9 @@ def main():
     r4 = c4(a.trial)
     r5 = c5(a.trial)
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"trial{a.trial}.json").write_text(json.dumps(
+    (OUT / f"{P}trial{a.trial}.json").write_text(json.dumps(
         {"trial": a.trial, "c1": r1, "c2": r2, "c3": r3, "c4": r4, "c5": r5}, indent=1))
-    print(f"\nsaved results/capstone/trial{a.trial}.json")
+    print(f"\nsaved results/capstone/{P}trial{a.trial}.json")
     return 0
 
 

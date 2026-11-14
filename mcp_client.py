@@ -60,12 +60,32 @@ def call_tool(name: str, arguments: dict):
     except MCPError:
         raise
     except Exception as exc:  # noqa: BLE001 — re-raised readably below
+        # The MCP client runs inside anyio task groups, which wrap whatever is
+        # raised in (nested) ExceptionGroups, so `except MCPError` above never
+        # sees a tool error. Look inside: if the server answered with an error,
+        # that answer is the message, and it is not a server-won't-start problem.
+        leaves = _leaves(exc)
+        for leaf in leaves:
+            if isinstance(leaf, MCPError):
+                raise leaf from exc
+        detail = "; ".join(f"{type(leaf).__name__}: {leaf}" for leaf in leaves)
         raise MCPError(
-            f"Couldn't call '{name}' over MCP: {exc}\n"
+            f"Couldn't call '{name}' over MCP: {detail}\n"
             f"Check that mcp_server.py runs on its own first:\n"
             f"    python mcp_server.py\n"
             f"If it exits immediately with an error, fix that before coming back here."
         ) from exc
+
+
+def _leaves(exc: BaseException) -> list[BaseException]:
+    """The exceptions that were actually raised, with (nested) exception groups flattened."""
+    inner = getattr(exc, "exceptions", None)
+    if not inner:
+        return [exc]
+    out: list[BaseException] = []
+    for sub in inner:
+        out.extend(_leaves(sub))
+    return out
 
 
 async def _call(name: str, arguments: dict):
