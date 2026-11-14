@@ -1282,3 +1282,126 @@ Records for a no-results run, a bad-key run and a bad-strategy run, from `logs/c
 ```
 
 **Caveats.** The fresh queries and labels were drafted by me (the assistant), not written by the student, and the labels were not independently checked; the file says so. Trial 1's console output was copied from the terminal into `trial1_raw.txt` because the `tee` command for that trial was broken across lines and wrote no file. `eval_retrieval.py` (with the `--set fresh` option the trials used) was committed after the trials, not before.
+
+
+## Capstone Verdicts, Diagnoses and the Improvement
+
+### Verdicts (before the fix; targets from `criteria.md`, trials in "Capstone Run Log" above)
+
+| # | Criterion | Target | Trials 1, 2, 3 | Verdict |
+|---|---|---|---|---|
+| 1 | `category` finds the right garment first (fresh set) | 15 of 17 | 15, 15, 15 | MET (exactly at the target) |
+| 2 | Never turns a right answer into a wrong one | 0 regressions | 2, 2, 2 | MISSED |
+| 3 | A bad input to the new strategy stops cleanly | 5 of 5 | 2, 2, 2 | MISSED |
+| 4 | No extra model calls | 10 of 10 | 10, 10, 10 | MET |
+| 5 | Every run leaves a record, including failures | 20 of 20 | 20, 20, 20 | MET |
+
+### Diagnoses
+
+**Criterion 3 (before): stage `mcp_client.call_tool`; mechanism: exception-group wrapping defeated an `except MCPError`.** The server did its job: `retrieval.rank` raised `ValueError("Unknown search strategy 'semantic'. Choose one of: keyword, category.")`, FastMCP returned it as an error result, and `_call` raised `MCPError("The tool 'search_listings' returned an error: …")`. That raise happens inside two nested `async with` blocks (`stdio_client`, `ClientSession`), and anyio wraps anything raised there in two nested `ExceptionGroup`s. `call_tool` has `except MCPError: raise`, which only matches a bare `MCPError`, so the group fell to the catch-all, which printed only the group's own text ("unhandled errors in a TaskGroup (1 sub-exception)") and added "check that mcp_server.py runs", which is wrong advice when the server ran fine. I confirmed this by walking the group at run time, not by guessing: the innermost exception in the traceback was the `MCPError` carrying the correct text. All three bad strategy values failed the same way, so that is one problem with three symptoms.
+
+**Criterion 2: stage `retrieval.rank`, the keep rule in step 2; mechanism: designed fallback at score 0.** Under `category`, an item whose title names the garment type is kept even when it matches no query word (`type_match == 2 and wanted`). The `_FAMILIES` lexicon deliberately maps "coat" into the jacket family and "trousers" into the pants family. So `wool coat` detects "jacket" and keeps five jackets that match neither "wool" nor "coat", and `cargo pants size L` detects "pants" and keeps the one pair of trousers that is size M/L. `keyword` returns nothing for both, which my labels call correct. This is the same rule that makes `corduroy jacket` return a jacket and lets "pants" reach jeans, so loosening it trades one failure for the other. Two things to say plainly: my labels for F07 and F13 say "empty", while the dev rubric accepts right-type fallbacks for other queries (I labeled `ski jacket` that way), so the labels are not consistent with the design; and I did not change them after seeing results. On the 51 queries that have a labeled answer there are 0 regressions.
+
+**Criterion 1 (met, no margin).** The two misses come from the same ranking step as criterion 2: `oversized hoodie` puts the crewneck sweatshirt first because "oversized" is a title word it matches and the hoodie's title lacks, and `silk shirt` puts the polo first because "shirt" is a title word and the silk button-down's title says "Button-Down". A modifier or the bare garment word can outrank the right item. Criteria 1 and 2 are therefore one stage (`retrieval.rank`) with two symptoms; criterion 3 is a different stage (`mcp_client`).
+
+### The one improvement: criterion 3
+
+Aimed at the mechanism above. `mcp_client.call_tool` now flattens the exception groups (`_leaves`) and, if one of them is an `MCPError`, re-raises that one unchanged, so the tool's own message reaches the user. A real transport failure still gets the "check that the server runs" advice, now with the actual cause named. Commit `fix: keep tool error text through MCP exception groups (criterion 3)`. Before re-running anything I added `eval/test_mcp_error_unwrap.py` (three cases: nested-group tool error keeps its text; bare `MCPError` unchanged; transport failure keeps the advice), which passes. I then re-ran the full harness three times with nothing else changed (`python run_capstone.py --tag after --trial N`; the `--tag` option only renames output files).
+
+### Before and after, side by side
+
+**Before** (`results/capstone/run_log.md`):
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. category finds the right garment first (fresh set) | 15 of 17 | 15/17 | 15/17 | 15/17 | MET |
+| 2. never turns a right answer into a wrong one | 0 regressions | 2 in 60 | 2 in 60 | 2 in 60 | MISSED |
+| 3. bad input to the new strategy stops cleanly | 5 of 5 | 2/5 | 2/5 | 2/5 | MISSED |
+| 4. no extra model calls | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+| 5. every run leaves a record, including failures | 20 of 20 | 20/20 | 20/20 | 20/20 | MET |
+
+**After** (`results/capstone/after_run_log.md`):
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. category finds the right garment first (fresh set) | 15 of 17 | 15/17 | 15/17 | 15/17 | MET |
+| 2. never turns a right answer into a wrong one | 0 regressions | 2 in 60 | 2 in 60 | 2 in 60 | MISSED |
+| 3. bad input to the new strategy stops cleanly | 5 of 5 | 5/5 | 5/5 | 5/5 | MET |
+| 4. no extra model calls | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+| 5. every run leaves a record, including failures | 20 of 20 | 20/20 | 20/20 | 19/20 | MISSED |
+
+| # | Before (runs 1, 2, 3) | After (runs 1, 2, 3) | Verdict before → after |
+|---|---|---|---|
+| 1 | 15, 15, 15 | 15, 15, 15 | MET → MET |
+| 2 | 2, 2, 2 | 2, 2, 2 | MISSED → MISSED (not touched) |
+| 3 | 2, 2, 2 | **5, 5, 5** | MISSED → **MET** |
+| 4 | 10, 10, 10 | 10, 10, 10 | MET → MET |
+| 5 | 20, 20, 20 | 20, 20, **19** | MET → **MISSED** |
+
+**Did it help?** Yes for what it was aimed at: criterion 3 went from 2 of 5 to 5 of 5 in all three trials, and the message a user sees for a bad strategy changed from a wrong instruction to the right one:
+
+```
+  input: query='corduroy jacket' strategy='semantic'
+[1] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[2] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='semantic'
+      out: MCPError
+      →    stopping: search failed
+  outcome='search_failed'  message="Couldn't search the listings. The tool 'search_listings' returned an error: Error executing tool search_listings: Unknown search strategy 'semantic'. Choose one of: keyword, category."
+  -> PASS
+
+  input: query='corduroy jacket' strategy='CATEGORY'
+[5] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[6] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='CATEGORY'
+      out: MCPError
+      →    stopping: search failed
+  outcome='search_failed'  message="Couldn't search the listings. The tool 'search_listings' returned an error: Error executing tool search_listings: Unknown search strategy 'CATEGORY'. Choose one of: keyword, category."
+  -> PASS
+
+-> 5 of 5
+```
+
+Nothing else the fix touches changed: criteria 1, 2 and 4 are identical to before, and the criterion 4 re-runs were real (cache hits 0; output tokens over the ten runs were 2044, 2170 and 2046 in the three trials).
+
+**The one number that got worse, and why it is not the fix.** Criterion 5 went from 20/20 to 19/20 in trial 3. Run 5 of 20 was planned as a normal completing run (`90s track jacket in size M`) and came back `model_unavailable` because Gemini answered `503 UNAVAILABLE … This model is currently experiencing high demand` on the `create_fit_card` call. The search had already succeeded, and the fix only changes how a failed MCP tool call is reported, so it cannot have caused this. The log did its job: the run left a valid record with the 503 in `error`. I am still calling criterion 5 MISSED, because the target said 20 of 20 and one run's outcome was not the one I planned. Honest reading: across 120 planned runs in six trials, one hit a real outage (plus the 24 planned bad-key failures, which behaved correctly every time). That says the criterion mixes two things, "every run leaves a record" (held in all 120) and "each run's outcome is the one I intended" (depends on the live model staying up). I did not change the criterion, because it was measurable and I met it five times out of six; splitting it is what I would do next.
+
+```
+  log lines: 20 (expected 20)
+   1 completed          got completed          PASS
+   2 no_results         got no_results         PASS
+   3 model_unavailable  got model_unavailable  PASS
+   4 search_failed      got search_failed      PASS
+   5 completed          got model_unavailable  FAIL outcome 'model_unavailable', wanted 'completed'
+   6 no_results         got no_results         PASS
+   7 model_unavailable  got model_unavailable  PASS
+   8 search_failed      got search_failed      PASS
+   9 completed          got completed          PASS
+```
+
+The step trace and record for that run (`run_capstone.py`, `c5()`; record from `logs/after_capstone_trial3_c5.jsonl`, line 5):
+
+```
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[90] suggest_outfit
+      in:  90s Track Jacket — Navy/White Stripe + wardrobe of 10 items
+      out: Outfit One: Streetwear Sporty Pair the 90s track jacket with the white ribbed tank top underneath, tucked into…
+[91] create_fit_card
+      in:  90s Track Jacket — Navy/White Stripe
+      out: ModelUnavailable
+```
+
+```
+{"ts": "2026-11-14T21:26:23.945+00:00", "run_id": "b854e5b7", "entrypoint": "run_capstone.py", "query": "90s track jacket in size M", "strategy": "category", "parsed": {"description": "90s track jacket", "size": "M", "max_price": null}, "wardrobe_items": 10, "outcome": "model_unavailable", "error": "Got outfit ideas, but couldn't write the fit card. Couldn't reach the model: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}", "n_results": 5, "selected": {"id": "lst_004", "title": "90s Track Jacket — Navy/White Stripe", "price": 45.0, "platform": "poshmark"}, "switched_from": null, "price_verdict": "about average", "fit_card_chars": null, "duration_ms": 2711.6, "step_ms": {"parse": 0.0, "search": 270.7, "select": 0.0, "compare": 0.3, "suggest": 1382.8, "fit_card": 1057.4}, "wait_ms": 0.0, "model_calls": 2, "cache_hits": 0, "prompt_tokens": 282, "output_tokens": 144, "model": "gemini-3.5-flash-lite", "python": "3.13.2"}
+```
+
+### What I would do next, honestly
+
+- **Criterion 2 is still open.** The cleanest fix is a rule that drops score-0 type matches when the query contains a content word that matched nothing at all, but that would bring back the `corduroy jacket` failure that the keep rule exists to fix. The decision belongs with the labels: either "no match returns the right type" is acceptable (then F07 and F13 are mislabeled) or it is not (then the rule needs a narrower exception). I have not made that call.
+- **Targets I would tighten.** Criterion 1 (15 of 17 is exactly the margin; I would raise it to 16 of 17, which it would currently miss) and criterion 4 (it only checks the count of model calls, which cannot vary; a check that the same query returns the same top result under both strategies when no garment type is named would say more).
+- **Caveats carried over.** Queries and labels were drafted by the assistant, not the student; none of the labels was independently checked.

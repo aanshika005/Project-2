@@ -1,0 +1,648 @@
+
+======================================================================
+CRITERION 1: category puts a labeled-relevant listing at rank 1 (fresh set)
+======================================================================
+  F01 'flannel shirt'                    top-1=lst_003  OK
+  F02 'black leather boots'              top-1=lst_028  OK
+  F03 'oversized hoodie'                 top-1=lst_012  MISS
+  F05 'sweater size M'                   top-1=lst_008  OK
+  F08 'cardigan size S'                  top-1=lst_008  OK
+  F10 'white sneakers size 9'            top-1=lst_035  OK
+  F11 'floral summer dress'              top-1=lst_013  OK
+  F12 'leather jacket under $60'         top-1=lst_007  OK
+  F16 'puffer jacket'                    top-1=lst_007  OK
+  F17 'ski jacket'                       top-1=lst_007  OK
+  F19 'polo shirt'                       top-1=lst_024  OK
+  F20 'chelsea boots'                    top-1=lst_028  OK
+  F21 'bomber jacket'                    top-1=lst_022  OK
+  F22 'silk shirt'                       top-1=lst_024  MISS
+  F23 'denim vest'                       top-1=lst_038  OK
+  F24 'velvet blazer'                    top-1=lst_036  OK
+  F25 'biker shorts'                     top-1=lst_026  OK
+  -> 15 of 17 (target 15)
+
+======================================================================
+CRITERION 2: no query where keyword's top result is right and category's is not
+======================================================================
+  -> 2 regressions in 60 queries ['F07', 'F13']
+
+======================================================================
+CRITERION 3: bad inputs to the new strategy stop cleanly
+======================================================================
+
+  input: query='corduroy jacket' strategy='semantic'
+[1] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[2] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='semantic'
+      out: MCPError
+      →    stopping: search failed
+  outcome='search_failed'  message="Couldn't search the listings. The tool 'search_listings' returned an error: Error executing tool search_listings: Unknown search strategy 'semantic'. Choose one of: keyword, category."
+  -> PASS
+
+  input: query='corduroy jacket' strategy=''
+[3] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[4] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy=''
+      out: MCPError
+      →    stopping: search failed
+  outcome='search_failed'  message="Couldn't search the listings. The tool 'search_listings' returned an error: Error executing tool search_listings: Unknown search strategy ''. Choose one of: keyword, category."
+  -> PASS
+
+  input: query='corduroy jacket' strategy='CATEGORY'
+[5] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[6] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='CATEGORY'
+      out: MCPError
+      →    stopping: search failed
+  outcome='search_failed'  message="Couldn't search the listings. The tool 'search_listings' returned an error: Error executing tool search_listings: Unknown search strategy 'CATEGORY'. Choose one of: keyword, category."
+  -> PASS
+
+  input: query='' strategy='category'
+[7] parse_query
+      in:  
+      out: description='', size=None, max_price=None
+[8] search_listings (via MCP)
+      in:  description='', size=None, max_price=None, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+  outcome='no_results'  message='No listings matched your search. Try different keywords.'
+  -> PASS
+
+  input: query='   ' strategy='category'
+[9] parse_query
+      in:     
+      out: description='', size=None, max_price=None
+[10] search_listings (via MCP)
+      in:  description='', size=None, max_price=None, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+  outcome='no_results'  message='No listings matched your search. Try different keywords.'
+  -> PASS
+
+  -> 5 of 5
+
+======================================================================
+CRITERION 4: 10 category runs, each completed run makes exactly 2 model calls
+======================================================================
+[11] parse_query
+      in:  vintage band tee
+      out: description='vintage band tee', size=None, max_price=None
+[12] search_listings (via MCP)
+      in:  description='vintage band tee', size=None, max_price=None, strategy='category'
+      out: 10 items: Vintage Band Tee — Faded Grey, Graphic Tee — 2003 Tour Bootleg Style, Y2K Baby Tee — Butterfly Print … +7 more
+      →    branch: found, continuing
+[13] select
+      out: Vintage Band Tee — Faded Grey ($19.0, depop)
+      →    top search result
+[14] compare_prices
+      in:  Vintage Band Tee — Faded Grey ($19.0, depop)
+      out: about average (median $21.5 across 14 other tops)
+      →    branch: keeping the top match
+[15] suggest_outfit
+      in:  Vintage Band Tee — Faded Grey + wardrobe of 10 items
+      out: Hello! That faded grey vintage band tee is a fantastic find that will fit right into your wardrobe. Here are t…
+[16] create_fit_card
+      in:  Vintage Band Tee — Faded Grey
+      out: Scored this faded grey vintage band tee on depop for just $19 and I'm obsessed with the grunge vibe. Can't wai…
+      →    done
+[17] parse_query
+      in:  90s track jacket in size M
+      out: description='90s track jacket', size='M', max_price=None
+[18] search_listings (via MCP)
+      in:  description='90s track jacket', size='M', max_price=None, strategy='category'
+      out: 5 items: 90s Track Jacket — Navy/White Stripe, 90s Leather Bomber — Black, Shacket — Olive Canvas … +2 more
+      →    branch: found, continuing
+[19] select
+      out: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      →    top search result
+[20] compare_prices
+      in:  90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[21] suggest_outfit
+      in:  90s Track Jacket — Navy/White Stripe + wardrobe of 10 items
+      out: Hey! That 90s Champion track jacket is such an easy win for your closet. Here are two ways to style it using y…
+[22] create_fit_card
+      in:  90s Track Jacket — Navy/White Stripe
+      out: Just scored this vintage 90s track jacket on Poshmark for only $45 and I'm obsessed with the athletic streetwe…
+      →    done
+[23] parse_query
+      in:  silk slip dress
+      out: description='silk slip dress', size=None, max_price=None
+[24] search_listings (via MCP)
+      in:  description='silk slip dress', size=None, max_price=None, strategy='category'
+      out: 2 items: 90s Silk Slip Dress — Floral, Midi Length, Silk Button-Down — Sage Green
+      →    branch: found, continuing
+[25] select
+      out: 90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      →    top search result
+[26] compare_prices
+      in:  90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      out: about average (median $30 across 9 other bottoms)
+      →    branch: keeping the top match
+[27] suggest_outfit
+      in:  90s Silk Slip Dress — Floral, Midi Length + wardrobe of 10 items
+      out: Outfit 1: Layer the vintage black denim jacket over the 90s Silk Slip Dress, and pair them with your black com…
+[28] create_fit_card
+      in:  90s Silk Slip Dress — Floral, Midi Length
+      out: Scored this 90s Silk Slip Dress on depop for only $30 and I am so obsessed with the floral 90s grunge vibe. Al…
+      →    done
+[29] parse_query
+      in:  platform sneakers size 8
+      out: description='platform sneakers', size='US 8', max_price=None
+[30] search_listings (via MCP)
+      in:  description='platform sneakers', size='US 8', max_price=None, strategy='category'
+      out: 1 items: Platform Sneakers — White Chunky Sole
+      →    branch: found, continuing
+[31] select
+      out: Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      →    top search result
+[32] compare_prices
+      in:  Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      out: about average (median $44 across 3 other shoes)
+      →    branch: keeping the top match
+[33] suggest_outfit
+      in:  Platform Sneakers — White Chunky Sole + wardrobe of 10 items
+      out: Hey there! Grab those platform sneakers because they will be so fun to style with what you already own. Here a…
+[34] create_fit_card
+      in:  Platform Sneakers — White Chunky Sole
+      out: Finally scored these Platform Sneakers on Poshmark for just $48 and I am so obsessed with the chunky Y2K vibe.…
+      →    done
+[35] parse_query
+      in:  denim jacket under $50
+      out: description='denim jacket', size=None, max_price=50.0
+[36] search_listings (via MCP)
+      in:  description='denim jacket', size=None, max_price=50.0, strategy='category'
+      out: 8 items: Denim Jacket — Light Wash, Cropped, 90s Track Jacket — Navy/White Stripe, Shacket — Olive Canvas … +5 more
+      →    branch: found, continuing
+[37] select
+      out: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      →    top search result
+[38] compare_prices
+      in:  Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[39] suggest_outfit
+      in:  Denim Jacket — Light Wash, Cropped + wardrobe of 10 items
+      out: Hey there! Grab that Wrangler jacket, because it is going to be your new favorite layering piece. Since you al…
+[40] create_fit_card
+      in:  Denim Jacket — Light Wash, Cropped
+      out: Scored this cropped light wash Wrangler denim jacket on Poshmark for just $42 and I'm obsessed with the vintag…
+      →    done
+[41] parse_query
+      in:  vintage band tee
+      out: description='vintage band tee', size=None, max_price=None
+[42] search_listings (via MCP)
+      in:  description='vintage band tee', size=None, max_price=None, strategy='category'
+      out: 10 items: Vintage Band Tee — Faded Grey, Graphic Tee — 2003 Tour Bootleg Style, Y2K Baby Tee — Butterfly Print … +7 more
+      →    branch: found, continuing
+[43] select
+      out: Vintage Band Tee — Faded Grey ($19.0, depop)
+      →    top search result
+[44] compare_prices
+      in:  Vintage Band Tee — Faded Grey ($19.0, depop)
+      out: about average (median $21.5 across 14 other tops)
+      →    branch: keeping the top match
+[45] suggest_outfit
+      in:  Vintage Band Tee — Faded Grey + wardrobe of 10 items
+      out: Hey! That faded grey band tee is such a great find and will easily become a wardrobe staple. Here are two effo…
+[46] create_fit_card
+      in:  Vintage Band Tee — Faded Grey
+      out: Scored this Vintage Band Tee — Faded Grey on depop for just $19 and I'm obsessed with the grunge energy. It ha…
+      →    done
+[47] parse_query
+      in:  90s track jacket in size M
+      out: description='90s track jacket', size='M', max_price=None
+[48] search_listings (via MCP)
+      in:  description='90s track jacket', size='M', max_price=None, strategy='category'
+      out: 5 items: 90s Track Jacket — Navy/White Stripe, 90s Leather Bomber — Black, Shacket — Olive Canvas … +2 more
+      →    branch: found, continuing
+[49] select
+      out: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      →    top search result
+[50] compare_prices
+      in:  90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[51] suggest_outfit
+      in:  90s Track Jacket — Navy/White Stripe + wardrobe of 10 items
+      out: Hey there! That 90s Champion track jacket is such a versatile find, and you can easily build some super cool s…
+[52] create_fit_card
+      in:  90s Track Jacket — Navy/White Stripe
+      out: Scored this vintage 90s track jacket on Poshmark for only $45 and I'm obsessed with the navy and white stripe.…
+      →    done
+[53] parse_query
+      in:  silk slip dress
+      out: description='silk slip dress', size=None, max_price=None
+[54] search_listings (via MCP)
+      in:  description='silk slip dress', size=None, max_price=None, strategy='category'
+      out: 2 items: 90s Silk Slip Dress — Floral, Midi Length, Silk Button-Down — Sage Green
+      →    branch: found, continuing
+[55] select
+      out: 90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      →    top search result
+[56] compare_prices
+      in:  90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      out: about average (median $30 across 9 other bottoms)
+      →    branch: keeping the top match
+[57] suggest_outfit
+      in:  90s Silk Slip Dress — Floral, Midi Length + wardrobe of 10 items
+      out: Hey there! This 90s floral silk slip dress is a gorgeous find and super versatile. Let's style it with pieces …
+  [rate limit] 15 requests used this minute. Waiting 41s. This is normal.
+[58] create_fit_card
+      in:  90s Silk Slip Dress — Floral, Midi Length
+      out: Scored this 90s Silk Slip Dress — Floral, Midi Length on depop for only $30 and I'm obsessed. Total 90s cottag…
+      →    done
+[59] parse_query
+      in:  platform sneakers size 8
+      out: description='platform sneakers', size='US 8', max_price=None
+[60] search_listings (via MCP)
+      in:  description='platform sneakers', size='US 8', max_price=None, strategy='category'
+      out: 1 items: Platform Sneakers — White Chunky Sole
+      →    branch: found, continuing
+[61] select
+      out: Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      →    top search result
+[62] compare_prices
+      in:  Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      out: about average (median $44 across 3 other shoes)
+      →    branch: keeping the top match
+[63] suggest_outfit
+      in:  Platform Sneakers — White Chunky Sole + wardrobe of 10 items
+      out: Hey there! Adding another pair of white sneakers to your rotation is totally fine, but since you already own c…
+[64] create_fit_card
+      in:  Platform Sneakers — White Chunky Sole
+      out: Scored these platform sneakers with the chunky white sole on Poshmark for just $48 and I am obsessed. Total 90…
+      →    done
+[65] parse_query
+      in:  denim jacket under $50
+      out: description='denim jacket', size=None, max_price=50.0
+[66] search_listings (via MCP)
+      in:  description='denim jacket', size=None, max_price=50.0, strategy='category'
+      out: 8 items: Denim Jacket — Light Wash, Cropped, 90s Track Jacket — Navy/White Stripe, Shacket — Olive Canvas … +5 more
+      →    branch: found, continuing
+[67] select
+      out: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      →    top search result
+[68] compare_prices
+      in:  Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[69] suggest_outfit
+      in:  Denim Jacket — Light Wash, Cropped + wardrobe of 10 items
+      out: Hey there! You will get so much mileage out of this Wrangler jacket. Here are two fun ways to style it using w…
+[70] create_fit_card
+      in:  Denim Jacket — Light Wash, Cropped
+      out: Score! Snagged this cropped light wash Wrangler denim jacket on Poshmark for just $42 and I'm obsessed with th…
+      →    done
+
+  run  outcome       model_calls  cache_hits
+    1  completed     2            0
+    2  completed     2            0
+    3  completed     2            0
+    4  completed     2            0
+    5  completed     2            0
+    6  completed     2            0
+    7  completed     2            0
+    8  completed     2            0
+    9  completed     2            0
+   10  completed     2            0
+
+  -> 10 of 10 completed with exactly 2 model calls
+
+======================================================================
+CRITERION 5: 20 mixed runs each leave exactly one valid record
+======================================================================
+[71] parse_query
+      in:  vintage band tee
+      out: description='vintage band tee', size=None, max_price=None
+[72] search_listings (via MCP)
+      in:  description='vintage band tee', size=None, max_price=None, strategy='category'
+      out: 10 items: Vintage Band Tee — Faded Grey, Graphic Tee — 2003 Tour Bootleg Style, Y2K Baby Tee — Butterfly Print … +7 more
+      →    branch: found, continuing
+[73] select
+      out: Vintage Band Tee — Faded Grey ($19.0, depop)
+      →    top search result
+[74] compare_prices
+      in:  Vintage Band Tee — Faded Grey ($19.0, depop)
+      out: about average (median $21.5 across 14 other tops)
+      →    branch: keeping the top match
+[75] suggest_outfit
+      in:  Vintage Band Tee — Faded Grey + wardrobe of 10 items
+      out: Hello! This vintage band tee is an amazing addition to your closet. Here are two effortless ways to style it u…
+[76] create_fit_card
+      in:  Vintage Band Tee — Faded Grey
+      out: Scored this Vintage Band Tee — Faded Grey on depop for only $19 and I am obsessed. The charcoal wash gives it …
+      →    done
+[77] parse_query
+      in:  denim jacket under $5
+      out: description='denim jacket', size=None, max_price=5.0
+[78] search_listings (via MCP)
+      in:  description='denim jacket', size=None, max_price=5.0, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+[79] parse_query
+      in:  platform sneakers size 8
+      out: description='platform sneakers', size='US 8', max_price=None
+[80] search_listings (via MCP)
+      in:  description='platform sneakers', size='US 8', max_price=None, strategy='category'
+      out: 1 items: Platform Sneakers — White Chunky Sole
+      →    branch: found, continuing
+[81] select
+      out: Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      →    top search result
+[82] compare_prices
+      in:  Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      out: about average (median $44 across 3 other shoes)
+      →    branch: keeping the top match
+[83] suggest_outfit
+      in:  Platform Sneakers — White Chunky Sole
+      out: ModelUnavailable
+      →    stopping: model unreachable
+[84] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[85] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='semantic'
+      out: MCPError
+      →    stopping: search failed
+[86] parse_query
+      in:  90s track jacket in size M
+      out: description='90s track jacket', size='M', max_price=None
+[87] search_listings (via MCP)
+      in:  description='90s track jacket', size='M', max_price=None, strategy='category'
+      out: 5 items: 90s Track Jacket — Navy/White Stripe, 90s Leather Bomber — Black, Shacket — Olive Canvas … +2 more
+      →    branch: found, continuing
+[88] select
+      out: 90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      →    top search result
+[89] compare_prices
+      in:  90s Track Jacket — Navy/White Stripe ($45.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[90] suggest_outfit
+      in:  90s Track Jacket — Navy/White Stripe + wardrobe of 10 items
+      out: Hey there! I am so excited about this 90s Champion track jacket. It is such an easy, versatile piece to add to…
+[91] create_fit_card
+      in:  90s Track Jacket — Navy/White Stripe
+      out: Finally scored this vintage 90s track jacket in navy and white on Poshmark for just $45. Getting major retro s…
+      →    done
+[92] parse_query
+      in:  silk dress under $5
+      out: description='silk dress', size=None, max_price=5.0
+[93] search_listings (via MCP)
+      in:  description='silk dress', size=None, max_price=5.0, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+[94] parse_query
+      in:  denim jacket under $50
+      out: description='denim jacket', size=None, max_price=50.0
+[95] search_listings (via MCP)
+      in:  description='denim jacket', size=None, max_price=50.0, strategy='category'
+      out: 8 items: Denim Jacket — Light Wash, Cropped, 90s Track Jacket — Navy/White Stripe, Shacket — Olive Canvas … +5 more
+      →    branch: found, continuing
+[96] select
+      out: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      →    top search result
+[97] compare_prices
+      in:  Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[98] suggest_outfit
+      in:  Denim Jacket — Light Wash, Cropped
+      out: ModelUnavailable
+      →    stopping: model unreachable
+[99] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[100] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy=''
+      out: MCPError
+      →    stopping: search failed
+[101] parse_query
+      in:  silk slip dress
+      out: description='silk slip dress', size=None, max_price=None
+[102] search_listings (via MCP)
+      in:  description='silk slip dress', size=None, max_price=None, strategy='category'
+      out: 2 items: 90s Silk Slip Dress — Floral, Midi Length, Silk Button-Down — Sage Green
+      →    branch: found, continuing
+[103] select
+      out: 90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      →    top search result
+[104] compare_prices
+      in:  90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+      out: about average (median $30 across 9 other bottoms)
+      →    branch: keeping the top match
+[105] suggest_outfit
+      in:  90s Silk Slip Dress — Floral, Midi Length + wardrobe of 10 items
+      out: Outfit One: Edgy Contrast Layer your oversized grey crewneck sweatshirt right over the silk slip dress. The sl…
+[106] create_fit_card
+      in:  90s Silk Slip Dress — Floral, Midi Length
+      out: Scored this 90s Silk Slip Dress on depop for just $30 and I am so obsessed with the floral cottagecore vibe. C…
+      →    done
+[107] parse_query
+      in:  sneakers under $5
+      out: description='sneakers', size=None, max_price=5.0
+[108] search_listings (via MCP)
+      in:  description='sneakers', size=None, max_price=5.0, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+[109] parse_query
+      in:  flannel shirt
+      out: description='flannel shirt', size=None, max_price=None
+[110] search_listings (via MCP)
+      in:  description='flannel shirt', size=None, max_price=None, strategy='category'
+      out: 5 items: Oversized Flannel Shirt — Plaid Red/Black, Vintage Polo Shirt — Forest Green, Henley Long Sleeve — Washed Burgundy … +2 more
+      →    branch: found, continuing
+[111] select
+      out: Oversized Flannel Shirt — Plaid Red/Black ($22.0, thredUp)
+      →    top search result
+[112] compare_prices
+      in:  Oversized Flannel Shirt — Plaid Red/Black ($22.0, thredUp)
+      out: about average (median $20.5 across 14 other tops)
+      →    branch: keeping the top match
+[113] suggest_outfit
+      in:  Oversized Flannel Shirt — Plaid Red/Black
+      out: ModelUnavailable
+      →    stopping: model unreachable
+[114] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[115] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='CATEGORY'
+      out: MCPError
+      →    stopping: search failed
+[116] parse_query
+      in:  platform sneakers size 8
+      out: description='platform sneakers', size='US 8', max_price=None
+[117] search_listings (via MCP)
+      in:  description='platform sneakers', size='US 8', max_price=None, strategy='category'
+      out: 1 items: Platform Sneakers — White Chunky Sole
+      →    branch: found, continuing
+[118] select
+      out: Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      →    top search result
+[119] compare_prices
+      in:  Platform Sneakers — White Chunky Sole ($48.0, poshmark)
+      out: about average (median $44 across 3 other shoes)
+      →    branch: keeping the top match
+[120] suggest_outfit
+      in:  Platform Sneakers — White Chunky Sole + wardrobe of 10 items
+      out: Hey there! I am so excited you are looking at these platform sneakers. Since you already own a pair of chunky …
+  [rate limit] 15 requests used this minute. Waiting 41s. This is normal.
+[121] create_fit_card
+      in:  Platform Sneakers — White Chunky Sole
+      out: Score on Poshmark for these Platform Sneakers — White Chunky Sole! I only paid $48 and they are literally the …
+      →    done
+[122] parse_query
+      in:  hoodie under $5
+      out: description='hoodie', size=None, max_price=5.0
+[123] search_listings (via MCP)
+      in:  description='hoodie', size=None, max_price=5.0, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+[124] parse_query
+      in:  denim shorts
+      out: description='denim shorts', size=None, max_price=None
+[125] search_listings (via MCP)
+      in:  description='denim shorts', size=None, max_price=None, strategy='category'
+      out: 6 items: High-Waisted Denim Shorts — Cutoff, Biker Shorts — Black, Shiny, Straight Leg Black Jeans — Faded … +3 more
+      →    branch: found, continuing
+[126] select
+      out: High-Waisted Denim Shorts — Cutoff ($24.0, poshmark)
+      →    top search result
+[127] compare_prices
+      in:  High-Waisted Denim Shorts — Cutoff ($24.0, poshmark)
+      out: good deal (median $30 across 9 other bottoms)
+      →    branch: keeping the top match
+[128] suggest_outfit
+      in:  High-Waisted Denim Shorts — Cutoff
+      out: ModelUnavailable
+      →    stopping: model unreachable
+[129] parse_query
+      in:  denim jacket under $50
+      out: description='denim jacket', size=None, max_price=50.0
+[130] search_listings (via MCP)
+      in:  description='denim jacket', size=None, max_price=50.0, strategy='category'
+      out: 8 items: Denim Jacket — Light Wash, Cropped, 90s Track Jacket — Navy/White Stripe, Shacket — Olive Canvas … +5 more
+      →    branch: found, continuing
+[131] select
+      out: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      →    top search result
+[132] compare_prices
+      in:  Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+      out: about average (median $40 across 7 other outerwear)
+      →    branch: keeping the top match
+[133] suggest_outfit
+      in:  Denim Jacket — Light Wash, Cropped + wardrobe of 10 items
+      out: Hey there! I am so excited about this Wrangler denim jacket for you. A light wash cropped piece is such a vers…
+[134] create_fit_card
+      in:  Denim Jacket — Light Wash, Cropped
+      out: Score! Snagged this cropped light wash Wrangler denim jacket on Poshmark for only $42. It has the ultimate vin…
+      →    done
+[135] parse_query
+      in:  jeans under $5
+      out: description='jeans', size=None, max_price=5.0
+[136] search_listings (via MCP)
+      in:  description='jeans', size=None, max_price=5.0, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+[137] parse_query
+      in:  flannel shirt
+      out: description='flannel shirt', size=None, max_price=None
+[138] search_listings (via MCP)
+      in:  description='flannel shirt', size=None, max_price=None, strategy='category'
+      out: 5 items: Oversized Flannel Shirt — Plaid Red/Black, Vintage Polo Shirt — Forest Green, Henley Long Sleeve — Washed Burgundy … +2 more
+      →    branch: found, continuing
+[139] select
+      out: Oversized Flannel Shirt — Plaid Red/Black ($22.0, thredUp)
+      →    top search result
+[140] compare_prices
+      in:  Oversized Flannel Shirt — Plaid Red/Black ($22.0, thredUp)
+      out: about average (median $20.5 across 14 other tops)
+      →    branch: keeping the top match
+[141] suggest_outfit
+      in:  Oversized Flannel Shirt — Plaid Red/Black + wardrobe of 10 items
+      out: Hey there! That Woolrich red and black flannel is a brilliant secondhand find, especially for nailing that eff…
+[142] create_fit_card
+      in:  Oversized Flannel Shirt — Plaid Red/Black
+      out: Scored this vintage Woolrich Oversized Flannel Shirt on thredUp for only $22 and it is the ultimate grunge lay…
+      →    done
+[143] parse_query
+      in:  denim shorts
+      out: description='denim shorts', size=None, max_price=None
+[144] search_listings (via MCP)
+      in:  description='denim shorts', size=None, max_price=None, strategy='category'
+      out: 6 items: High-Waisted Denim Shorts — Cutoff, Biker Shorts — Black, Shiny, Straight Leg Black Jeans — Faded … +3 more
+      →    branch: found, continuing
+[145] select
+      out: High-Waisted Denim Shorts — Cutoff ($24.0, poshmark)
+      →    top search result
+[146] compare_prices
+      in:  High-Waisted Denim Shorts — Cutoff ($24.0, poshmark)
+      out: good deal (median $30 across 9 other bottoms)
+      →    branch: keeping the top match
+[147] suggest_outfit
+      in:  High-Waisted Denim Shorts — Cutoff + wardrobe of 10 items
+      out: Hey there! These Levi's denim shorts are a summer classic, and you can easily style them using the great piece…
+[148] create_fit_card
+      in:  High-Waisted Denim Shorts — Cutoff
+      out: Just scored these vintage High-Waisted Denim Shorts — Cutoff on Poshmark for only $24 and I'm so obsessed with…
+      →    done
+[149] parse_query
+      in:  velvet blazer
+      out: description='velvet blazer', size=None, max_price=None
+[150] search_listings (via MCP)
+      in:  description='velvet blazer', size=None, max_price=None, strategy='category'
+      out: 2 items: Velvet Blazer — Emerald Green, Vintage Linen Blazer — Cream
+      →    branch: found, continuing
+[151] select
+      out: Velvet Blazer — Emerald Green ($52.0, depop)
+      →    top search result
+[152] compare_prices
+      in:  Velvet Blazer — Emerald Green ($52.0, depop)
+      out: pricey (median $40 across 7 other outerwear)
+      →    branch: pricey, switching to a cheaper top-3 match
+[153] compare_prices
+      in:  Vintage Linen Blazer — Cream ($38.0, thredUp)
+      out: about average (median $42 across 7 other outerwear)
+      →    re-checked the new item
+[154] suggest_outfit
+      in:  Vintage Linen Blazer — Cream + wardrobe of 10 items
+      out: Hello! As your stylist, I am so excited about this vintage linen blazer. Cream linen adds instant polish while…
+[155] create_fit_card
+      in:  Vintage Linen Blazer — Cream
+      out: Scored this Vintage Linen Blazer — Cream on thredUp for just $38 and I'm obsessed. It gives the ultimate effor…
+      →    done
+
+  log lines: 20 (expected 20)
+   1 completed          got completed          PASS
+   2 no_results         got no_results         PASS
+   3 model_unavailable  got model_unavailable  PASS
+   4 search_failed      got search_failed      PASS
+   5 completed          got completed          PASS
+   6 no_results         got no_results         PASS
+   7 model_unavailable  got model_unavailable  PASS
+   8 search_failed      got search_failed      PASS
+   9 completed          got completed          PASS
+  10 no_results         got no_results         PASS
+  11 model_unavailable  got model_unavailable  PASS
+  12 search_failed      got search_failed      PASS
+  13 completed          got completed          PASS
+  14 no_results         got no_results         PASS
+  15 model_unavailable  got model_unavailable  PASS
+  16 completed          got completed          PASS
+  17 no_results         got no_results         PASS
+  18 completed          got completed          PASS
+  19 completed          got completed          PASS
+  20 completed          got completed          PASS
+
+  -> 20 of 20 runs; log lines 20 of 20
+
+saved results/capstone/after_trial2.json
