@@ -348,3 +348,16 @@ history is what shows your criteria existed before your results did.
 units.
 
 `results/` is deliberately **not** in `.gitignore`.
+
+
+## Capstone tests (Path B)
+
+The five capstone criteria (`criteria.md`, "Capstone criteria") are run by `run_capstone.py`. It needs the full environment above (packages, `GEMINI_API_KEY`) and makes real model calls with the cache off, so one trial takes a few minutes because of the 15-requests-a-minute limit.
+
+| Command | What it does |
+|---|---|
+| `python run_capstone.py --trial 1 2>&1 \| tee results/capstone/trial1_raw.txt` | One trial of all five criteria; writes `results/capstone/trial1.json` and `logs/capstone_trial1_c{3,4,5}.jsonl` (use `--trial 2`, `--trial 3` for the others; keep each command on one line) |
+| `python run_capstone.py --table` | Builds the run log table from the three trials into `results/capstone/run_log.md` |
+| `--tag after` | Added to either command above, writes `after_`-prefixed files, used for the re-run after the fix |
+| `python eval/test_mcp_error_unwrap.py` | Checks the criterion 3 fix with no server or API key |
+| `python eval_retrieval.py --set fresh` | Runs only the fresh query set through both strategies (no model) |

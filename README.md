@@ -842,6 +842,16 @@ Declared before building. Each one is built in a later commit, in this order.
 - **"Tops" is too broad for the price switch** (`agent.py::run_agent`, the `compare` step). A pricey "Vintage Graphic Hoodie" can be swapped for a band tee, because both count as tops. *What I'd do:* also require one shared title keyword between the original and the swap. *Why I stopped:* it's a stretch feature, and none of my five criteria covered it.
 - **Keyword search can't tell what an item *is* from what it *mentions*.** "Corduroy jacket" returns corduroy pants first, and the mesh top ranks for "graphic tee" because its description mentions one. *What I'd do:* weight `category` matches more heavily, or match the category word against the query. *Why I stopped:* criteria 1 and 5 passed, so I had no measured miss to justify changing the ranking. **Update: addressed for garment types by the extension below (`--strategy category`); the modifier half of it ('linen pants' still returns cargo pants first) is not.**
 
+### Capstone
+
+Two criteria are still missed. Neither is a surprise; both are written up with their diagnosis in "Capstone Verdicts, Diagnoses and the Improvement".
+
+- **Criterion 2: `category` returns items for queries that have no good answer** (`retrieval.rank`, the score-0 keep rule; `wool coat` returns jackets and `cargo pants size L` returns the one pair of M/L trousers, where `keyword` returns nothing). *What I'd do:* first decide the policy, because my F07 and F13 labels ("empty is right") disagree with the dev rubric ("a right-type fallback is acceptable"). If fallbacks are acceptable, relabel both and write that into the criterion. If they are not, drop score-0 type matches when the query contains a content word that matched nothing, then re-run `corduroy jacket` to check that the fix it was built for still holds. *Why I stopped:* the milestone allowed one improvement and I spent it on criterion 3, which was a plain bug. This one is a design decision with a trade-off, and changing the labels after seeing the results would have been tuning to the test.
+- **Criterion 5: one planned "completes" run came back `model_unavailable`** (Gemini 503, "high demand", on the fit-card call in trial 3 after the fix). *What I'd do:* split the criterion in two, "every run leaves a valid record" (held in all 120 planned runs) and "the outcome is the one I caused" (which depends on the live model), and for the second use a retry rule or a stubbed model so it measures my code and not Google's uptime. *Why I stopped:* it is an outage, not a bug in the system, and nothing I changed caused it; rewriting the criterion after missing it once would not have been a measurable-versus-unmeasurable fix, so I recorded the miss as it was.
+- **Near-misses.** Criterion 1 met its target exactly (15 of 17, with `oversized hoodie` and `silk shirt` wrong because a modifier or the bare garment word outranks the right item); I would tighten it to 16 of 17, which it would currently miss. Criterion 4 checks only the count of model calls, which cannot vary, so it was set too low to teach me anything; I would replace it with "with no garment type named, `category` returns exactly the same list as `keyword`", which is a real way for the extension to break.
+
+**What I would do next, with another unit.** Get someone other than me to write and label a new set of at least 30 queries, because every accuracy number here (criteria 1 and 2) rests on queries and labels that the assistant drafted and nobody independently checked. I would do that before touching the ranking rule, since a rule tuned against labels I can't trust would only look better.
+
 <!-- ═════════════════════════════════════════════════════════════════════
 
      SUBMISSION CHECKLIST — unit 3
@@ -1092,6 +1102,31 @@ On 2026-11-13, with the default `keyword` strategy: `python eval_retrieval.py --
 
 **Limits of this number.** Ten runs over five queries is enough for a typical run, not for a spread. Outfit prompts grow with the wardrobe (10 items here), so a bigger wardrobe costs more tokens. A cached run costs nothing in tokens and less time, so real use is cheaper than this. To turn the tokens into dollars, run `python measure_cost.py --price-in <$/M> --price-out <$/M>` with the prices for the model in `config.py`; I haven't, because I have no billing to measure.
 
+
+### Capstone cost: the category strategy, 60 runs
+
+**Measured.** The criterion 4 runs in `run_capstone.py` (`c4()`) are ten full agent runs with `--strategy category`, cache off, run in six trials (three before and three after the fix): 60 runs, all completed, records in `logs/capstone_trial*_c4.jsonl` and `logs/after_capstone_trial*_c4.jsonl`. Averaged over the 60:
+
+| Per run | Mean | Min | Max |
+|---|---|---|---|
+| Model calls | 2.0 | 2 | 2 |
+| Prompt tokens | 625 | 586 | 686 |
+| Output tokens | 209 | 172 | 281 |
+| Total tokens | 834 | | |
+| Working time (s) (`duration_ms` minus `wait_ms`) | 2.4 | 1.8 | 3.5 |
+
+That matches the earlier 10-run `keyword` measurement above (2 calls, 822 tokens, 2.5 s), so the extension costs nothing extra.
+
+**What it would cost for 100 people a day.** I have no usage data, so the number of runs per person is an assumption: 5 a day.
+- Runs a day: 100 people × 5 runs = 500 runs.
+- Price (an assumption, see below): $0.30 per million input tokens and $2.50 per million output tokens.
+- Per run: 625 × $0.30 / 1,000,000 = $0.0001875 in, plus 209 × $2.50 / 1,000,000 = $0.0005225 out, which is $0.00071.
+- Per day: 500 × $0.00071 = $0.355. Per 30 days: $0.355 × 30 = $10.65.
+- Model calls: 500 runs × 2 = 1,000 a day. At the 15-requests-a-minute limit that is 1,000 / 15 = 67 minutes of capacity, and if all 100 people ran one query at the same moment the last would wait about 100 / 7 = 14 minutes.
+
+So 100 people a day would cost about $0.36 a day (about $11 a month) at those prices, 74% of it output tokens, and nothing at all on the free tier, where the 15-requests-a-minute limit is what you would hit first.
+
+**Where the price comes from, and how much to trust it.** Google's own pricing page (fetched 2026-11-14) lists Gemini 3.1 Flash-Lite and Gemini 3.5 Flash but not 3.5 Flash-Lite, so I could not confirm the price for the model in `config.py`. The $0.30 and $2.50 come from a secondary source (eesel.ai, "Gemini 3.5 Flash-Lite pricing", last edited 2026-08-06), which says output includes thinking tokens. I don't know whether the `usage_metadata` token counts I measured include thinking tokens; if they don't, the real output bill is higher. Treat the dollar figure as an estimate with those two gaps, and the token counts as the measured part.
 
 ---
 
@@ -1405,3 +1440,20 @@ The step trace and record for that run (`run_capstone.py`, `c5()`; record from `
 - **Criterion 2 is still open.** The cleanest fix is a rule that drops score-0 type matches when the query contains a content word that matched nothing at all, but that would bring back the `corduroy jacket` failure that the keep rule exists to fix. The decision belongs with the labels: either "no match returns the right type" is acceptable (then F07 and F13 are mislabeled) or it is not (then the rule needs a narrower exception). I have not made that call.
 - **Targets I would tighten.** Criterion 1 (15 of 17 is exactly the margin; I would raise it to 16 of 17, which it would currently miss) and criterion 4 (it only checks the count of model calls, which cannot vary; a check that the same query returns the same top result under both strategies when no garment type is named would say more).
 - **Caveats carried over.** Queries and labels were drafted by the assistant, not the student; none of the labels was independently checked.
+
+
+## Capstone
+
+Everything for the capstone extension (a second retrieval strategy, `category`, for `search_listings`) is in these sections of this README: [The Shape](#the-shape), [Extension: Category-Aware Retrieval](#extension-category-aware-retrieval), [Instrumentation](#instrumentation), [What It Costs](#what-it-costs) (including "Capstone cost"), [Capstone Run Log](#capstone-run-log) and [Capstone Verdicts, Diagnoses and the Improvement](#capstone-verdicts-diagnoses-and-the-improvement), and the "Capstone" part of [What's Still Broken](#whats-still-broken). The five capstone criteria are in `criteria.md` under "Capstone criteria". The earlier project's "How I Used AI" above is unchanged.
+
+### How I Used AI
+
+**Moment 1: the criteria.**
+- *What I asked for:* I gave claude the five capstone criteria and asked to tell me their short comings.
+- *What came back:* five criteria with targets and reasons. Then I pasted in the self-check page and asked it to run them through. It found that criterion 1 leaned on the word "relevant", that criterion 2 bundled two things (a margin of at least 2 over `keyword` plus zero regressions), and that criterion 4 bundled model calls and timing.
+- *What I changed:* before committing, criterion 1 now says "a listing whose id is in the query's `relevant` list", criterion 2 keeps only the zero-regression half, and criterion 4 keeps only the exact count of model calls (timing was mostly model noise). The criteria went in as "add capstone criteria", before any result.
+
+**Moment 2: diagnosing criterion 3.**
+- *What I asked for:* why a bad `strategy` shows "Couldn't call 'search_listings' over MCP … check that mcp_server.py runs" when the server runs fine.
+- *What came back:* a suspicion that the real error was hidden inside an exception group, and a short diagnostic to run instead of a fix on that guess. The traceback I pasted back showed the correct `MCPError` text inside two nested `ExceptionGroup`s, and that `call_tool`'s `except MCPError` could never match it.
+- *What I changed:* `mcp_client.call_tool` now unwraps the groups and re-raises the inner `MCPError`; I added `eval/test_mcp_error_unwrap.py` before re-running the trials. Criterion 3 went from 2 of 5 to 5 of 5.
