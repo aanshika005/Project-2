@@ -161,6 +161,8 @@ On the fresh set, `strategy="category"` returns, at rank 1, a listing whose id i
 
 **Why this target:** Not 15 of 15, because `category` only knows 22 garment families, so a fresh query that uses a word I didn't list ("skirt", say) falls back to plain keyword scoring, and I already know one failure class: a modifier word loses to the garment type ("linen pants" returns cargo pants first). Not 11 of 15 (73%), because `keyword` got 28 of 34 (82%) on the earlier sets, and a target below that would let the extension be worse than the thing it extends and still pass.
 
+**Note (2026-11-14).** The "How it is measured" line above says `python eval_retrieval.py` over the fresh file. The `--set fresh` option that does that was added after this file was committed, and `run_capstone.py` runs the same check. The target and reason are unchanged.
+
 ## 2. It never turns a right answer into a wrong one
 
 On the fresh set and on the 35 earlier queries, there are **0 queries** where `keyword`'s rank-1 listing is in the `relevant` list but `category`'s is not.
@@ -169,7 +171,9 @@ On the fresh set and on the 35 earlier queries, there are **0 queries** where `k
 
 **Why this target:** Zero, not "few", because `category` only reorders: it uses the same price and size filters and the same keyword score, and adds a garment-type step. A right answer demoted by that step is a design bug, not noise, and the search involves no model, so nothing random can cause it. (Today it holds on the 35: category changed the rank-1 listing on 5 of 35 and made none worse.)
 
-**Revised after the first trials (2026-11-14).** The sentence above says "keeping `keyword`'s rank-1 listing in the `relevant` list". It does not say what happens on queries with no answer in the data. The harness (`run_capstone.py`, and the "WORSE" marker in `eval_retrieval.py`) also counts a query where the right answer is nothing, `keyword` returns nothing, and `category` returns items. That found 2 such queries on the fresh set (`wool coat`, `cargo pants size L`). I am scoring criterion 2 by the stricter reading: it is a wrong answer where a right one was possible, which is what the criterion's title says. Under the literal wording alone there are 0 regressions. I chose this reading after seeing the results, so it is flagged here and in the README.
+**Revised after the first trials (2026-11-14).** The original criterion is above, unchanged. Revised: *On the fresh set and the 35 earlier queries, there are **0 queries** where `keyword`'s result is correct and `category`'s is not, where a result is correct if its rank-1 listing is in the query's `relevant` list or, for a query labeled `expect_empty`, if the result is an empty list.*
+
+**Why I revised it:** the original sentence only covered queries that have a `relevant` list, so for the 8 fresh queries with no good answer it could not be scored at all, and the harness (`run_capstone.py`, and the "WORSE" marker in `eval_retrieval.py`) had to decide what to do; it counted an empty list as the correct result. That is a measurement gap in the wording, not a looser target: the target stays at zero. I made this revision after seeing the results, and it makes the criterion stricter, not easier. Under the original wording alone the count is 0 and the criterion would be met; under the revised wording the count is 2 (`wool coat`, `cargo pants size L`: `keyword` returns nothing, `category` returns items) and it is missed. I score it by the revised wording.
 
 ## 3. A bad input to the new strategy stops cleanly
 

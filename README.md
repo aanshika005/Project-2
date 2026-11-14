@@ -850,7 +850,7 @@ Two criteria are still missed. Neither is a surprise; both are written up with t
 - **Criterion 5: one planned "completes" run came back `model_unavailable`** (Gemini 503, "high demand", on the fit-card call in trial 3 after the fix). *What I'd do:* split the criterion in two, "every run leaves a valid record" (held in all 120 planned runs) and "the outcome is the one I caused" (which depends on the live model), and for the second use a retry rule or a stubbed model so it measures my code and not Google's uptime. *Why I stopped:* it is an outage, not a bug in the system, and nothing I changed caused it; rewriting the criterion after missing it once would not have been a measurable-versus-unmeasurable fix, so I recorded the miss as it was.
 - **Near-misses.** Criterion 1 met its target exactly (15 of 17, with `oversized hoodie` and `silk shirt` wrong because a modifier or the bare garment word outranks the right item); I would tighten it to 16 of 17, which it would currently miss. Criterion 4 checks only the count of model calls, which cannot vary, so it was set too low to teach me anything; I would replace it with "with no garment type named, `category` returns exactly the same list as `keyword`", which is a real way for the extension to break.
 
-**What I would do next, with another unit.** Get someone other than me to write and label a new set of at least 30 queries, because every accuracy number here (criteria 1 and 2) rests on queries and labels that the assistant drafted and nobody independently checked. I would do that before touching the ranking rule, since a rule tuned against labels I can't trust would only look better.
+**What I would do next, with another unit.** Get someone other than me to write and label a new set of at least 30 queries, because every accuracy number here (criteria 1 and 2) rests on queries and labels that the assistant drafted and nobody independently checked. I would do that before touching the ranking rule, since a rule tuned against labels I can't trust would only look better. I would do that rather than fix criterion 2 or split criterion 5 first, because those two fixes both depend on knowing what the right answer is for a query with no match, and that is exactly what my labels disagree with themselves about.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
@@ -885,6 +885,34 @@ Two criteria are still missed. Neither is a surprise; both are written up with t
      Do not delete and recreate this repository. Your commit history is what
      shows your criteria existed before your results did.
      ═════════════════════════════════════════════════════════════════════ -->
+
+---
+
+## What This Extends
+
+**System: Project 2, FitFindr, this repository** (the command-line shopping agent: it parses a query, searches 40 thrift listings through a tool on an MCP server, compares the price, and asks the model for outfits and a fit card). I did not start a new system; the five original criteria, the loop and the tools are unchanged and still run.
+
+**What is new, in three parts:**
+1. **The extension:** a second retrieval strategy for `search_listings`, `category` (`retrieval.py`), chosen with a `strategy` input that is passed through `tools.py`, `mcp_server.py`, `agent.py` and `app.py` (`--strategy category`). `keyword` stays the default and returns exactly what it returned before (checked against a 42-case snapshot).
+2. **The run path and instrumentation:** a structured log record for every run, failures included (`runlog.py`, `logs/fitfindr_runs.jsonl`), and a cost measurement (`measure_cost.py`).
+3. **The test:** five new criteria (`criteria.md`, "Capstone criteria"), a harness that runs them three times (`run_capstone.py`), and one improvement to the MCP error path (`mcp_client.py`).
+
+**An order caveat.** The retrieval results on my 35 earlier queries were committed before the capstone criteria, because I built and measured the extension first. The criteria say so and test criteria 1 and 2 on a separate set of queries written after the criteria were committed.
+
+---
+
+## Running It
+
+**Start command** (from the repo root, virtual environment active):
+
+```bash
+python app.py ask 'vintage graphic tee under $30'
+python app.py ask 'corduroy jacket' --strategy category --trace
+```
+
+**Environment:** Python 3.11, 3.12 or 3.13 (developed and tested on 3.13.2; not 3.14); `pip install -r requirements.txt` (`python-dotenv`, `google-genai`, `mcp>=1,<2`, `flask`, `gunicorn`); a free `GEMINI_API_KEY` in `.env`; an internet connection. **Model files: none.** The model is the hosted Gemini API (`gemini-3.5-flash-lite`); the only data file is `data/listings.json`, 19 KB, in the repo. Every run appends one JSON line to `logs/fitfindr_runs.jsonl`.
+
+**Full path, including a clean-checkout test, the capstone tests and every command: [RUNNING.md](RUNNING.md).**
 
 ---
 
