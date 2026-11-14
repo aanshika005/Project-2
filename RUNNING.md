@@ -4,6 +4,67 @@ Everything about how the starter works and how to use it.
 
 ---
 
+## Run it (Path B: local, with logs)
+
+FitFindr runs on my machine, started by one command, and every run appends a
+structured record to `logs/fitfindr_runs.jsonl`. There is no hosted URL.
+
+**Start it** (from the repo root, virtual environment active):
+
+```bash
+python app.py ask 'vintage graphic tee under $30'
+```
+
+It prints the match, the outfit and the fit card, and one JSON line lands in the log.
+Try `--strategy category` for the second retrieval strategy, and `--trace` for the loop step by step.
+
+**What the environment needs**
+
+| | |
+|---|---|
+| Python | 3.11, 3.12 or 3.13 (not 3.14). Developed and tested on 3.13 |
+| Packages | pinned in `requirements.txt`: `python-dotenv>=1.0,<1.2`, `google-genai>=1.0,<2.0`, `mcp>=1.0,<2.0` (MCP 2.x breaks `mcp_server.py`), `flask>=3.0,<4.0`, `gunicorn>=21.2,<24.0` |
+| Model | none on disk. The outfit and fit card come from the hosted Gemini API (`gemini-3.5-flash-lite`, set in `config.py`), so there are no model files to download. Needs a free `GEMINI_API_KEY` in `.env` and an internet connection |
+| Data | `data/listings.json`, 19 KB, in the repo |
+| Limits | the free tier allows 15 requests a minute; `generate.py` waits when it hits that, and the log records how long it waited (`wait_ms`) |
+
+**From a clean checkout, the exact steps**
+
+```bash
+git clone https://github.com/aanshika005/Project-2.git fitfindr-fresh
+cd fitfindr-fresh
+python3 -m venv .venv
+source .venv/bin/activate             # Windows: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cp .env.example .env                  # then paste your key into .env
+python test.py                        # should end with everything passing
+python app.py ask 'vintage graphic tee under $30'
+python runlog.py show -n 1            # the record that run just wrote
+```
+
+**Without an API key** you can still run the retrieval half, which needs only
+Python 3.10+ and the standard library: `python eval_retrieval.py`
+(see "Extension: category-aware search" below).
+
+**The run log**
+
+| Command | What it does |
+|---|---|
+| `python runlog.py show -n 12` | The last 12 runs, one JSON object per line |
+| `python runlog.py summary` | Counts by outcome, mean time and tokens |
+| `python measure_cost.py` | Runs the agent 10 times with the cache off and writes `results/cost_<time>.md` (the cost of one run) |
+| `FITFINDR_RUN_LOG=off python run_eval.py --label x` | Run the 75-run eval without adding 75 lines to the log |
+| `FITFINDR_RUN_LOG=/tmp/x.jsonl python app.py ask '...'` | Send records to another file |
+
+Each record has: `ts`, `run_id`, `entrypoint`, `query`, `strategy`, `parsed`, `wardrobe_items`,
+`outcome`, `error`, `n_results`, `selected`, `switched_from`, `price_verdict`, `fit_card_chars`,
+`duration_ms`, `step_ms`, `wait_ms`, `model_calls`, `cache_hits`, `prompt_tokens`, `output_tokens`,
+`model`, `python`. `outcome` is one of `completed`, `no_results`, `search_failed`,
+`model_unavailable`, `crashed`, `interrupted`; a run that fails writes a record like any other.
+The full field list is at the top of `runlog.py`.
+
+---
+
 ## Before your first class
 
 Setup happens **before class**. The [environment setup page](../pages/ide_setup)

@@ -14,8 +14,13 @@ Build and test your three tools in `tools.py` first. Then come here.
 """
 
 import re
+import sys
+import time
+from pathlib import Path
 
 import config
+import generate
+import runlog
 import trace
 from tools import suggest_outfit, create_fit_card, compare_prices
 from mcp_client import call_tool, MCPError
@@ -49,6 +54,7 @@ def new_session(query: str, wardrobe: dict) -> dict:
         "price_check": None,         # what compare_prices returned (stretch)
         "switched_from": None,       # the original top match, if the pricey branch swapped it
         "strategy": "keyword",       # which retrieval strategy search used
+        "outcome": None,             # completed / no_results / search_failed / model_unavailable (see runlog.py)
         "error": None,               # set when the run ended early
     }
 
@@ -133,7 +139,7 @@ def _price_note(check: dict) -> str:
 
 # ── the loop ──────────────────────────────────────────────────────────────────
 
-def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
+def _run_loop(query: str, wardrobe: dict, strategy: str, timings: dict, partial: dict) -> dict:
     """
     Run the loop once and return the finished session.
 
@@ -193,13 +199,21 @@ def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
     """
     session = new_session(query, wardrobe)
     session["strategy"] = strategy
+    partial["session"] = session           # so a crash can still log how far the run got
 
     next_step = "parse"
     count = 0
+    mark = None                                # (step name, start time) of the step now running
 
     while next_step != "done":
         count += 1
         trace.check_iterations(count)          # stop condition
+
+        now = time.perf_counter()              # close the previous step, open this one
+        if mark:
+            timings[mark[0]] = timings.get(mark[0], 0.0) + (now - mark[1]) * 1000
+        mark = (next_step, now)
+        partial["mark"] = mark                 # lets run_agent time the step that crashed
 
         if next_step == "parse":
             session["parsed"] = parse_query(query)
@@ -218,6 +232,7 @@ def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
                 })
             except MCPError as exc:            # server won't start, tool not registered, bad arguments
                 session["error"] = f"Couldn't search the listings. {exc}"
+                session["outcome"] = "search_failed"
                 trace.step("search_listings (via MCP)", inputs=_search_inputs(p, strategy), returned="MCPError",
                            note="stopping: search failed")
                 next_step = "done"
@@ -225,6 +240,7 @@ def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
             # THE BRANCH: decide the next step from what search returned
             if not session["search_results"]:
                 session["error"] = _no_results_message(p)
+                session["outcome"] = "no_results"
                 trace.step("search_listings (via MCP)", inputs=_search_inputs(p, strategy), returned=[],
                            note="branch: empty, stopping before suggest_outfit")
                 next_step = "done"             # stop: never call suggest_outfit with nothing
@@ -275,6 +291,7 @@ def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
                 next_step = "fit_card"
             except ModelUnavailable as exc:    # bad key, no internet, still rate limited
                 session["error"] = f"Found an item, but couldn't get outfit ideas. {exc}"
+                session["outcome"] = "model_unavailable"
                 trace.step("suggest_outfit", inputs=session["selected_item"]["title"],
                            returned="ModelUnavailable", note="stopping: model unreachable")
                 next_step = "done"
@@ -284,14 +301,99 @@ def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
                 session["fit_card"] = create_fit_card(
                     session["outfit_suggestion"], session["selected_item"]
                 )
+                session["outcome"] = "completed"
                 trace.step("create_fit_card", inputs=session["selected_item"]["title"],
                            returned=session["fit_card"], note="done")
             except ModelUnavailable as exc:
                 session["error"] = f"Got outfit ideas, but couldn't write the fit card. {exc}"
+                session["outcome"] = "model_unavailable"
                 trace.step("create_fit_card", inputs=session["selected_item"]["title"],
                            returned="ModelUnavailable", note="stopping: model unreachable")
             next_step = "done"
 
+    if mark:                                   # close the last step
+        timings[mark[0]] = timings.get(mark[0], 0.0) + (time.perf_counter() - mark[1]) * 1000
+
+    return session
+
+
+def _usage_now() -> dict:
+    """The model counters as they stand, so a run can log what *it* spent."""
+    tokens = generate.token_counts()
+    return {"calls": generate.call_count(), "cache_hits": generate.cache_hits(),
+            "wait_s": generate.wait_seconds(), "prompt": tokens["prompt"], "output": tokens["output"]}
+
+
+def _log_record(query, wardrobe, strategy, session, outcome, error, started, before, timings) -> dict:
+    """One run-log record (fields are documented in runlog.py)."""
+    after = _usage_now()
+    session = session or {}
+    item = session.get("selected_item")
+    switched = session.get("switched_from")
+    check = session.get("price_check")
+    card = session.get("fit_card")
+    return {
+        "ts": runlog.now_iso(),
+        "run_id": runlog.new_run_id(),
+        "entrypoint": Path(sys.argv[0]).name or "python",
+        "query": query,
+        "strategy": strategy,
+        "parsed": session.get("parsed") or None,
+        "wardrobe_items": len((wardrobe or {}).get("items") or []),
+        "outcome": outcome,
+        "error": error,
+        "n_results": len(session.get("search_results") or []),
+        "selected": ({"id": item["id"], "title": item["title"], "price": item["price"],
+                      "platform": item["platform"]} if item else None),
+        "switched_from": switched["id"] if switched else None,
+        "price_verdict": check["verdict"] if check else None,
+        "fit_card_chars": len(card) if isinstance(card, str) else None,
+        "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+        "step_ms": {k: round(v, 1) for k, v in timings.items()},
+        "wait_ms": round((after["wait_s"] - before["wait_s"]) * 1000, 1),
+        "model_calls": after["calls"] - before["calls"],
+        "cache_hits": after["cache_hits"] - before["cache_hits"],
+        "prompt_tokens": after["prompt"] - before["prompt"],
+        "output_tokens": after["output"] - before["output"],
+        "model": config.MODEL,
+        "python": sys.version.split()[0],
+    }
+
+
+def _close_open_step(partial: dict, timings: dict) -> None:
+    """Add the time of the step that was running when an exception hit."""
+    mark = partial.get("mark")
+    if mark:
+        timings[mark[0]] = timings.get(mark[0], 0.0) + (time.perf_counter() - mark[1]) * 1000
+
+
+def run_agent(query: str, wardrobe: dict, strategy: str = "keyword") -> dict:
+    """
+    Run the loop once, write one record to the run log, and return the session.
+
+    Same inputs and return value as before the log existed (see `_run_loop` for
+    the loop itself). The record is written whether the run completed, stopped
+    early, or blew up: an exception is logged as outcome "crashed" and then
+    re-raised, so callers still see it. Fields: runlog.py.
+    """
+    started = time.perf_counter()
+    before = _usage_now()
+    timings: dict = {}
+    partial: dict = {}
+    try:
+        session = _run_loop(query, wardrobe, strategy, timings, partial)
+    except KeyboardInterrupt:
+        _close_open_step(partial, timings)
+        runlog.write(_log_record(query, wardrobe, strategy, partial.get("session"), "interrupted",
+                                 "KeyboardInterrupt", started, before, timings))
+        raise
+    except Exception as exc:  # noqa: BLE001 — logged, then re-raised unchanged
+        _close_open_step(partial, timings)
+        runlog.write(_log_record(query, wardrobe, strategy, partial.get("session"), "crashed",
+                                 f"{type(exc).__name__}: {exc}", started, before, timings))
+        raise
+    runlog.write(_log_record(query, wardrobe, strategy, session, session["outcome"], session["error"],
+                             started, before, timings))
     return session
 
 

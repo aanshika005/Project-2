@@ -39,6 +39,7 @@ import config
 _call_times: list[float] = []
 _session_calls = 0
 _cache_hits = 0
+_waited_s = 0.0
 _prompt_tokens = 0
 _output_tokens = 0
 _client = None
@@ -99,6 +100,13 @@ def clear_cache() -> int:
 # ─── Pacing and guards ───────────────────────────────────────────────────────
 
 
+def _sleep(seconds: float) -> None:
+    """Sleep, and remember how long, so a run's log can separate waiting from working."""
+    global _waited_s
+    _waited_s += seconds
+    time.sleep(seconds)
+
+
 def _wait_for_slot() -> None:
     """Sleep, if we've used up this minute's allowance."""
     now = time.monotonic()
@@ -118,7 +126,7 @@ def _wait_for_slot() -> None:
                 file=sys.stderr,
                 flush=True,
             )
-        time.sleep(sleep_for)
+        _sleep(sleep_for)
         _call_times[:] = [t for t in _call_times if time.monotonic() - t < 60.0]
 
 
@@ -154,6 +162,15 @@ def usage() -> str:
 
 def call_count() -> int:
     return _session_calls
+
+
+def cache_hits() -> int:
+    return _cache_hits
+
+
+def wait_seconds() -> float:
+    """Total time this session has spent sleeping for rate limits and retries."""
+    return _waited_s
 
 
 def token_counts() -> dict:
@@ -338,7 +355,7 @@ def generate(
                 file=sys.stderr,
                 flush=True,
             )
-            time.sleep(backoff)
+            _sleep(backoff)
 
     raise RuntimeError(
         f"Still rate limited after {config.MAX_RETRIES} attempts. Wait a "
