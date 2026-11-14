@@ -1,0 +1,327 @@
+{
+ "version": 1,
+ "rubric": "A listing is 'relevant' to a query when its garment type is, in everyday usage, a kind of the noun asked for AND any colour/material/size/price words in the query do not contradict it. Labels were written by reading data/listings.json, not by running any search. Where the data has no exact match (e.g. 'corduroy jacket'), any item of the right garment type is an acceptable fallback and a wrong-type item is not.",
+ "drafting_note": "Queries F01-F18 were drafted by Claude without seeing the listings; F19-F25 were added by Claude after reading the listings so that at least 15 queries have an answer. Labels were written by reading data/listings.json, not by running any search. The student did not write these queries; labels have not yet been independently checked.",
+ "queries": [
+  {
+   "id": "F01",
+   "split": "fresh",
+   "query": "flannel shirt",
+   "description": "flannel shirt",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_003"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings"
+  },
+  {
+   "id": "F02",
+   "split": "fresh",
+   "query": "black leather boots",
+   "description": "black leather boots",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_028"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings; only boots are tan suede, accepted as right-type fallback"
+  },
+  {
+   "id": "F03",
+   "split": "fresh",
+   "query": "oversized hoodie",
+   "description": "oversized hoodie",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_015"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings"
+  },
+  {
+   "id": "F04",
+   "split": "fresh",
+   "query": "jeans under $30",
+   "description": "jeans",
+   "size": null,
+   "max_price": 30.0,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; all jeans are $30 or more (lowest is exactly $30, which is not 'under')"
+  },
+  {
+   "id": "F05",
+   "split": "fresh",
+   "query": "sweater size M",
+   "description": "sweater",
+   "size": "M",
+   "max_price": null,
+   "relevant": [
+    "lst_008"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings; judgment: a cardigan counts as a sweater; it is One Size"
+  },
+  {
+   "id": "F06",
+   "split": "fresh",
+   "query": "mini skirt",
+   "description": "mini skirt",
+   "size": null,
+   "max_price": null,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; no skirts in the data"
+  },
+  {
+   "id": "F07",
+   "split": "fresh",
+   "query": "wool coat",
+   "description": "wool coat",
+   "size": null,
+   "max_price": null,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; no coats in the data"
+  },
+  {
+   "id": "F08",
+   "split": "fresh",
+   "query": "cardigan size S",
+   "description": "cardigan",
+   "size": "S",
+   "max_price": null,
+   "relevant": [
+    "lst_008"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings; One Size"
+  },
+  {
+   "id": "F09",
+   "split": "fresh",
+   "query": "joggers under $25",
+   "description": "joggers",
+   "size": null,
+   "max_price": 25.0,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; no joggers, and no pants at all under $25"
+  },
+  {
+   "id": "F10",
+   "split": "fresh",
+   "query": "white sneakers size 9",
+   "description": "white sneakers",
+   "size": "US 9",
+   "max_price": null,
+   "relevant": [
+    "lst_035"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings; judgment: off-white counts as white; the white pair is US 8"
+  },
+  {
+   "id": "F11",
+   "split": "fresh",
+   "query": "floral summer dress",
+   "description": "floral summer dress",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_013"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings"
+  },
+  {
+   "id": "F12",
+   "split": "fresh",
+   "query": "leather jacket under $60",
+   "description": "leather jacket",
+   "size": null,
+   "max_price": 60.0,
+   "relevant": [
+    "lst_004",
+    "lst_007",
+    "lst_010",
+    "lst_032"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings; only leather jacket is $75; the rest are right-type fallbacks under $60"
+  },
+  {
+   "id": "F13",
+   "split": "fresh",
+   "query": "cargo pants size L",
+   "description": "cargo pants",
+   "size": "L",
+   "max_price": null,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; the only cargo pants are W29, which is not L"
+  },
+  {
+   "id": "F14",
+   "split": "fresh",
+   "query": "knit beanie",
+   "description": "knit beanie",
+   "size": null,
+   "max_price": null,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; no beanies or hats other than a bucket hat"
+  },
+  {
+   "id": "F15",
+   "split": "fresh",
+   "query": "denim shorts size M",
+   "description": "denim shorts",
+   "size": "M",
+   "max_price": null,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; the only denim shorts are W27, which is not M"
+  },
+  {
+   "id": "F16",
+   "split": "fresh",
+   "query": "puffer jacket",
+   "description": "puffer jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_004",
+    "lst_007",
+    "lst_010",
+    "lst_022",
+    "lst_032"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings; no puffer; any jacket is a right-type fallback, as in the dev rubric"
+  },
+  {
+   "id": "F17",
+   "split": "fresh",
+   "query": "ski jacket",
+   "description": "ski jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_004",
+    "lst_007",
+    "lst_010",
+    "lst_022",
+    "lst_032"
+   ],
+   "expect_empty": false,
+   "note": "drafted by Claude before it read the listings; no ski jacket; any jacket is a right-type fallback"
+  },
+  {
+   "id": "F18",
+   "split": "fresh",
+   "query": "wedding suit",
+   "description": "wedding suit",
+   "size": null,
+   "max_price": null,
+   "relevant": [],
+   "expect_empty": true,
+   "note": "drafted by Claude before it read the listings; no suits in the data"
+  },
+  {
+   "id": "F19",
+   "split": "fresh",
+   "query": "polo shirt",
+   "description": "polo shirt",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_024"
+   ],
+   "expect_empty": false,
+   "note": "added by Claude after reading the listings, to reach 15 scoreable queries"
+  },
+  {
+   "id": "F20",
+   "split": "fresh",
+   "query": "chelsea boots",
+   "description": "chelsea boots",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_028"
+   ],
+   "expect_empty": false,
+   "note": "added by Claude after reading the listings, to reach 15 scoreable queries"
+  },
+  {
+   "id": "F21",
+   "split": "fresh",
+   "query": "bomber jacket",
+   "description": "bomber jacket",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_022"
+   ],
+   "expect_empty": false,
+   "note": "added by Claude after reading the listings, to reach 15 scoreable queries"
+  },
+  {
+   "id": "F22",
+   "split": "fresh",
+   "query": "silk shirt",
+   "description": "silk shirt",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_029"
+   ],
+   "expect_empty": false,
+   "note": "added by Claude after reading the listings, to reach 15 scoreable queries"
+  },
+  {
+   "id": "F23",
+   "split": "fresh",
+   "query": "denim vest",
+   "description": "denim vest",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_038"
+   ],
+   "expect_empty": false,
+   "note": "added by Claude after reading the listings, to reach 15 scoreable queries"
+  },
+  {
+   "id": "F24",
+   "split": "fresh",
+   "query": "velvet blazer",
+   "description": "velvet blazer",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_036"
+   ],
+   "expect_empty": false,
+   "note": "added by Claude after reading the listings, to reach 15 scoreable queries"
+  },
+  {
+   "id": "F25",
+   "split": "fresh",
+   "query": "biker shorts",
+   "description": "biker shorts",
+   "size": null,
+   "max_price": null,
+   "relevant": [
+    "lst_026"
+   ],
+   "expect_empty": false,
+   "note": "added by Claude after reading the listings, to reach 15 scoreable queries"
+  }
+ ]
+}
