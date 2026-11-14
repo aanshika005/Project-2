@@ -177,6 +177,8 @@ For these 5 inputs, the agent stops without an exception reaching the caller, **
 
 **Why this target:** 5 of 5, because none of it involves the model: the strategy is validated in `retrieval.rank`, travels over MCP, and comes back as a tool error, and the empty queries never reach scoring. If any of the five escapes as a traceback or leaves no record, a user on the bad path sees a crash instead of a message, and I would not see it in the log. Exact-match names, not case-insensitive, because there are only two strategies and a typo like `"Category"` is better answered with the list of valid names than by guessing what was meant.
 
+**Revised after first run (2026-11-14).** The reason above says empty queries "never reach scoring". That was wrong: the first run showed `""` and `"   "` are parsed to an empty description and still go through the MCP `search_listings` call (about 500 ms), which returns `[]`. The target is unchanged. Only the reason was inaccurate. Results: `results/criterion3_bad_inputs_2026-11-14.md`.
+
 ## 4. The new strategy makes no extra model calls
 
 In each of 10 cache-off runs of `python app.py ask` with `--strategy category` that complete, `model_calls` in the run record is exactly **2**, the same as `keyword`.
