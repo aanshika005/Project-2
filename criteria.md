@@ -171,11 +171,11 @@ On the fresh set and on the 35 earlier queries, there are **0 queries** where `k
 
 ## 3. A bad input to the new strategy stops cleanly
 
-For these 5 inputs, the agent stops without an exception reaching the caller, and **the run is logged** (outcome `search_failed` or `no_results`), in **5 of 5**: `strategy="semantic"`, `strategy=""`, `strategy="CATEGORY"`, and the queries `""` and `"   "` (spaces only) run with `strategy="category"`. For the three bad strategy values, the message shown to the user must name both valid choices (`keyword` and `category`).
+For these 5 inputs, the agent stops without an exception reaching the caller, **the run is logged** (outcome `search_failed` or `no_results`), and the message shown to the user is non-empty, in **5 of 5**: `strategy="semantic"`, `strategy=""`, `strategy="CATEGORY"`, and the queries `""` and `"   "` (spaces only) run with `strategy="category"`. For the three bad strategy values, the message must also name both valid choices (`keyword` and `category`). Uppercase is rejected on purpose: strategy names are exact, so `"CATEGORY"` is a bad input, not a spelling variant to accept.
 
-**How it is measured:** call `run_agent` directly with each input, with `FITFINDR_RUN_LOG` pointing at a scratch file; check that no exception escapes, read the last record's `outcome`, and search the message for both strategy names.
+**How it is measured:** call `run_agent` directly with each input, with `FITFINDR_RUN_LOG` pointing at a scratch file; check that no exception escapes, read the last record's `outcome` and `error`, and search the message for both strategy names. The observed messages go in the results, not in this file.
 
-**Why this target:** 5 of 5, because none of it involves the model: the strategy is validated in `retrieval.rank`, travels over MCP, and comes back as a tool error, and the empty queries never reach scoring. If any of the five escapes as a traceback or leaves no record, a user on the bad path sees a crash instead of a message, and I would not see it in the log. "CATEGORY" is deliberately in the set: I haven't decided whether capital letters should be accepted, and this criterion only requires the failure to be clean and readable, not for the input to work.
+**Why this target:** 5 of 5, because none of it involves the model: the strategy is validated in `retrieval.rank`, travels over MCP, and comes back as a tool error, and the empty queries never reach scoring. If any of the five escapes as a traceback or leaves no record, a user on the bad path sees a crash instead of a message, and I would not see it in the log. Exact-match names, not case-insensitive, because there are only two strategies and a typo like `"Category"` is better answered with the list of valid names than by guessing what was meant.
 
 ## 4. The new strategy makes no extra model calls
 
