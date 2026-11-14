@@ -35,15 +35,18 @@ import retrieval
 
 ROOT = Path(__file__).parent
 SPLIT_FILES = {"dev": ROOT / "eval" / "retrieval_dev.json",
-               "heldout": ROOT / "eval" / "retrieval_heldout.json"}
+               "heldout": ROOT / "eval" / "retrieval_heldout.json",
+               "fresh": ROOT / "eval" / "retrieval_fresh.json"}
+# --set old (default) = the 35 queries from the extension unit; --set fresh = the capstone set.
+SETS = {"old": ("dev", "heldout"), "fresh": ("fresh",)}
 SNAPSHOT = ROOT / "eval" / "baseline_keyword_snapshot.json"
 TIMING_REPS = 30
 
 
-def load_queries() -> list[dict]:
+def load_queries(which: str = "old") -> list[dict]:
     out = []
-    for path in SPLIT_FILES.values():
-        out.extend(json.loads(path.read_text(encoding="utf-8"))["queries"])
+    for split in SETS[which]:
+        out.extend(json.loads(SPLIT_FILES[split].read_text(encoding="utf-8"))["queries"])
     return out
 
 
@@ -107,14 +110,14 @@ def aggregate(rows: list[dict]) -> dict:
     }
 
 
-def run_eval(label: str, write: bool) -> int:
-    queries = load_queries()
+def run_eval(label: str, write: bool, which: str = "old") -> int:
+    queries = load_queries(which)
     started = dt.datetime.now()
     header = {
         "type": "run", "label": label, "when": started.isoformat(timespec="seconds"),
         "python": platform.python_version(), "platform": platform.platform(),
         "git": git_head(), "listings_sha": sha(ROOT / "data" / "listings.json"),
-        "query_files": {k: sha(v) for k, v in SPLIT_FILES.items()},
+        "query_files": {k: sha(SPLIT_FILES[k]) for k in SETS[which]},
         "n_queries": len(queries), "strategies": list(retrieval.STRATEGIES),
         "timing": f"median of {TIMING_REPS} calls per query, includes reading listings.json",
     }
@@ -138,7 +141,8 @@ def run_eval(label: str, write: bool) -> int:
             log.append(row)
 
     summary = {}
-    for split in ("dev", "heldout", "all"):
+    splits = (*SETS[which], "all") if which == "old" else SETS[which]
+    for split in splits:
         for strategy in retrieval.STRATEGIES:
             sel = [r for r in rows if r["strategy"] == strategy and (split == "all" or r["split"] == split)]
             agg = aggregate(sel)
@@ -151,7 +155,7 @@ def run_eval(label: str, write: bool) -> int:
     if write:
         out_dir = ROOT / "results"
         out_dir.mkdir(exist_ok=True)
-        stem = f"retrieval_{started.strftime('%Y-%m-%d_%H%M')}" + (f"_{label}" if label else "")
+        stem = f"retrieval_{which if which != 'old' else ''}{'_' if which != 'old' else ''}{started.strftime('%Y-%m-%d_%H%M')}" + (f"_{label}" if label else "")
         (out_dir / f"{stem}.jsonl").write_text("\n".join(json.dumps(x) for x in log) + "\n", encoding="utf-8")
         (out_dir / f"{stem}.md").write_text(md, encoding="utf-8")
         print(f"\nwrote results/{stem}.jsonl and results/{stem}.md", file=sys.stderr)
@@ -172,13 +176,16 @@ def render_markdown(header, rows, summary) -> str:
              f"Timing: {header['timing']}.\n")
     for split, title in (("dev", "Dev set (14 queries, written second; includes the failures the README already named)"),
                          ("heldout", "Held-out set (21 queries, written first)"),
+                         ("fresh", "Fresh set (written for the capstone criteria, after they were committed)"),
                          ("all", "Both sets")):
+        if f"{split}/keyword" not in summary:
+            continue
         L.append(f"## {title}\n")
         L.append("| Strategy | Top-1 correct | MRR | Recall@3 | Wrong items in top 3 (mean) | Expect-empty correct | Median ms |")
         L.append("|---|---|---|---|---|---|---|")
         for strategy in retrieval.STRATEGIES:
             a = summary[f"{split}/{strategy}"]
-            L.append(f"| {strategy} | {pct(a['top1'])} | {a['mrr']:.2f} | {pct(a['recall3'])} | "
+            L.append(f"| {strategy} | {pct(a['top1'])} ({round(a['top1'] * a['n_ranked'])}/{a['n_ranked']}) | {a['mrr']:.2f} | {pct(a['recall3'])} | "
                      f"{a['wrong3']:.2f} | {a['empty_correct']}/{a['n_expect_empty']} | {a['median_ms']} |")
         L.append("")
     L.append("## Per query\n")
@@ -244,6 +251,8 @@ def main() -> int:
     p.add_argument("--no-log", action="store_true", help="print only; don't write results/ files")
     p.add_argument("--check-baseline", action="store_true",
                    help="verify strategy=keyword still matches the pre-change snapshot")
+    p.add_argument("--set", dest="which", choices=sorted(SETS), default="old",
+                   help="old = dev+heldout (default); fresh = eval/retrieval_fresh.json")
     p.add_argument("--query", help="run one query through both strategies")
     p.add_argument("--size")
     p.add_argument("--max-price", type=float)
@@ -252,7 +261,7 @@ def main() -> int:
         return check_baseline()
     if args.query:
         return show_query(args)
-    return run_eval(args.label, write=not args.no_log)
+    return run_eval(args.label, write=not args.no_log, which=args.which)
 
 
 if __name__ == "__main__":

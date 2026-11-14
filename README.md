@@ -1096,3 +1096,189 @@ On 2026-11-13, with the default `keyword` strategy: `python eval_retrieval.py --
 ---
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**
+
+
+## Capstone Run Log
+
+Three trials of the five criteria in `criteria.md` ("Capstone criteria"), run back to back with nothing changed in between. Harness: `run_capstone.py` (`python run_capstone.py --trial N`, then `--table`). Raw console output of each trial: `results/capstone/trial1_raw.txt`, `trial2_raw.txt`, `trial3_raw.txt`; per-run records: `logs/capstone_trial{1,2,3}_c{3,4,5}.jsonl`; counts: `results/capstone/trial{1,2,3}.json`. Python 3.13.2, real MCP server, real Gemini model (`gemini-3.5-flash-lite`), cache off (`AI201_CACHE=0`).
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. category finds the right garment first (fresh set) | 15 of 17 | 15/17 | 15/17 | 15/17 | MET |
+| 2. never turns a right answer into a wrong one | 0 regressions | 2 in 60 | 2 in 60 | 2 in 60 | MISSED |
+| 3. bad input to the new strategy stops cleanly | 5 of 5 | 2/5 | 2/5 | 2/5 | MISSED |
+| 4. no extra model calls | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+| 5. every run leaves a record, including failures | 20 of 20 | 20/20 | 20/20 | 20/20 | MET |
+
+**Reading the table.** Criteria 1, 2 and 3 involve no model, so identical numbers in all three trials are what a deterministic search should give. They are not a sign that nothing re-ran. Criteria 4 and 5 do reach the model; the evidence that they really re-ran is below.
+
+- **1 MET, but with no room.** 15 of 17 in every trial, exactly the target. The two misses are `oversized hoodie` (top result is the crewneck sweatshirt, not the hoodie) and `silk shirt` (top result is a polo, not the silk button-down). In both, a modifier word or the garment family pulls in a wrong-but-related item. Three of the 15 hits (`leather jacket under $60`, `puffer jacket`, `ski jacket`) count only because I labeled any jacket an acceptable fallback, as the dev rubric does.
+- **2 MISSED.** `category` returned something for two queries where the right answer is nothing: `wool coat` (F07) and `cargo pants size L` (F13). `keyword` returned nothing for both, which is correct. On the 51 queries that have a labeled answer, there are 0 regressions (and `category` ranks 15 of 17 fresh correct against `keyword`'s 12). The harness counts an empty correct answer that `category` turns into a non-empty one as a regression, which is broader than the literal wording of the criterion ("rank-1 listing is in the `relevant` list"). I am keeping the stricter reading for the verdict; see the note under criterion 2 in `criteria.md`. Cause to diagnose: the "keep exact-type items at score 0" rule returns items that matched no query word at all.
+- **3 MISSED.** 2 of 5 in every trial. Both empty queries pass. All three bad strategy values stop cleanly and leave a record, but the user sees "Couldn't call 'search_listings' over MCP … Check that mcp_server.py runs on its own first" instead of the strategy error that names `keyword` and `category`.
+- **4 MET.** 10 of 10 in every trial.
+- **5 MET.** 20 of 20 in every trial. The four `model_unavailable` runs per trial were caused on purpose with a bad API key; no real Gemini outage occurred in these trials.
+
+**Evidence that the model-dependent criteria really re-ran.** Cache off in all three trials; `cache_hits` is 0 in every record. Token totals over the ten criterion-4 runs differ every trial, and the fit card for the same first run (`vintage band tee`) reads differently each time:
+
+| Trial | Model calls | Cache hits | Prompt tokens | Output tokens |
+|---|---|---|---|---|
+| 1 | 20 | 0 | 6299 | 2142 |
+| 2 | 20 | 0 | 6265 | 2083 |
+| 3 | 20 | 0 | 6208 | 2057 |
+
+- Trial 1, first fit card: `out: Scored this Vintage Band Tee — Faded Grey on depop for only $19 and I am obsessed. The fade is so good and it …`
+- Trial 2, first fit card: `out: Score this Vintage Band Tee — Faded Grey on depop for only $19 and I am so obsessed with the grunge streetwear…`
+- Trial 3, first fit card: `out: Scored this Vintage Band Tee — Faded Grey on depop for only $19 and the fade is just too good. Total grunge st…`
+
+### Output behind each row (trial 1 unless noted)
+
+**Criterion 1** — produced by `run_capstone.py`, `c1_c2()`, which calls `eval_retrieval.search` and so `retrieval.rank(..., strategy="category")`:
+
+```
+CRITERION 1: category puts a labeled-relevant listing at rank 1 (fresh set)
+======================================================================
+  F01 'flannel shirt'                    top-1=lst_003  OK
+  F02 'black leather boots'              top-1=lst_028  OK
+  F03 'oversized hoodie'                 top-1=lst_012  MISS
+  F05 'sweater size M'                   top-1=lst_008  OK
+  F08 'cardigan size S'                  top-1=lst_008  OK
+  F10 'white sneakers size 9'            top-1=lst_035  OK
+  F11 'floral summer dress'              top-1=lst_013  OK
+  F12 'leather jacket under $60'         top-1=lst_007  OK
+  F16 'puffer jacket'                    top-1=lst_007  OK
+  F17 'ski jacket'                       top-1=lst_007  OK
+  F19 'polo shirt'                       top-1=lst_024  OK
+  F20 'chelsea boots'                    top-1=lst_028  OK
+  F21 'bomber jacket'                    top-1=lst_022  OK
+  F22 'silk shirt'                       top-1=lst_024  MISS
+  F23 'denim vest'                       top-1=lst_038  OK
+  F24 'velvet blazer'                    top-1=lst_036  OK
+  F25 'biker shorts'                     top-1=lst_026  OK
+  -> 15 of 17 (target 15)
+```
+
+**Criterion 2** — same function (`c1_c2()`), same run:
+
+```
+  -> 2 regressions in 60 queries ['F07', 'F13']
+```
+
+The two queries it names, run afterwards with `python eval_retrieval.py --query` (function `show_query`):
+
+```
+query: 'wool coat'  size=None  max_price=None
+garment-type families detected: ['jacket']
+
+[keyword]
+  (nothing matched)
+
+[category]
+  1. lst_032  score=0  type_match=2  Shacket — Olive Canvas
+  2. lst_010  score=0  type_match=2  Vintage Windbreaker — Color Block Purple/Teal
+  3. lst_007  score=0  type_match=2  Denim Jacket — Light Wash, Cropped
+  4. lst_004  score=0  type_match=2  90s Track Jacket — Navy/White Stripe
+  5. lst_022  score=0  type_match=2  90s Leather Bomber — Black
+
+query: 'cargo pants'  size=L  max_price=None
+garment-type families detected: ['pants']
+
+[keyword]
+  (nothing matched)
+
+[category]
+  1. lst_025  score=0  type_match=2  Wide-Leg Linen Trousers — Natural
+```
+
+**Criterion 3** — `run_capstone.py`, `c3()`, which calls `agent.run_agent`; the error text comes from `retrieval.rank` raising `ValueError`, which `mcp_server.search_listings` passes back and `agent._run_loop` replaces with its generic MCP message. One failing input and one passing input:
+
+```
+  input: query='corduroy jacket' strategy='semantic'
+[1] parse_query
+      in:  corduroy jacket
+      out: description='corduroy jacket', size=None, max_price=None
+[2] search_listings (via MCP)
+      in:  description='corduroy jacket', size=None, max_price=None, strategy='semantic'
+      out: MCPError
+      →    stopping: search failed
+  outcome='search_failed'  message="Couldn't search the listings. Couldn't call 'search_listings' over MCP: unhandled errors in a TaskGroup (1 sub-exception)\nCheck that mcp_server.py runs on its own first:\n    python mcp_server.py\nIf it exits immediately with an error, fix that before coming back here."
+  -> FAIL: message does not name both keyword and category
+
+  input: query='' strategy='category'
+[7] parse_query
+      in:  
+      out: description='', size=None, max_price=None
+[8] search_listings (via MCP)
+      in:  description='', size=None, max_price=None, strategy='category'
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
+  outcome='no_results'  message='No listings matched your search. Try different keywords.'
+  -> PASS
+
+-> 2 of 5
+```
+
+The record `agent.run_agent` wrote for the first input (`runlog.write`, `logs/capstone_trial1_c3.jsonl`, line 1):
+
+```
+{"ts": "2026-11-14T20:24:44.683+00:00", "run_id": "6631bff9", "entrypoint": "run_capstone.py", "query": "corduroy jacket", "strategy": "semantic", "parsed": {"description": "corduroy jacket", "size": null, "max_price": null}, "wardrobe_items": 10, "outcome": "search_failed", "error": "Couldn't search the listings. Couldn't call 'search_listings' over MCP: unhandled errors in a TaskGroup (1 sub-exception)\nCheck that mcp_server.py runs on its own first:\n    python mcp_server.py\nIf it exits immediately with an error, fix that before coming back here.", "n_results": 0, "selected": null, "switched_from": null, "price_verdict": null, "fit_card_chars": null, "duration_ms": 562.3, "step_ms": {"parse": 0.0, "search": 561.9}, "wait_ms": 0.0, "model_calls": 0, "cache_hits": 0, "prompt_tokens": 0, "output_tokens": 0, "model": "gemini-3.5-flash-lite", "python": "3.13.2"}
+```
+
+**Criterion 4** — `run_capstone.py`, `c4()`, ten calls to `agent.run_agent(..., strategy="category")`:
+
+```
+  run  outcome       model_calls  cache_hits
+    1  completed     2            0
+    2  completed     2            0
+    3  completed     2            0
+    4  completed     2            0
+    5  completed     2            0
+    6  completed     2            0
+    7  completed     2            0
+    8  completed     2            0
+    9  completed     2            0
+   10  completed     2            0
+
+  -> 10 of 10 completed with exactly 2 model calls
+```
+
+One record from `logs/capstone_trial1_c4.jsonl` (line 1):
+
+```
+{"ts": "2026-11-14T20:24:48.348+00:00", "run_id": "097b337d", "entrypoint": "run_capstone.py", "query": "vintage band tee", "strategy": "category", "parsed": {"description": "vintage band tee", "size": null, "max_price": null}, "wardrobe_items": 10, "outcome": "completed", "error": null, "n_results": 10, "selected": {"id": "lst_033", "title": "Vintage Band Tee — Faded Grey", "price": 19.0, "platform": "depop"}, "switched_from": null, "price_verdict": "about average", "fit_card_chars": 212, "duration_ms": 2562.0, "step_ms": {"parse": 0.0, "search": 291.1, "select": 0.0, "compare": 0.3, "suggest": 1685.3, "fit_card": 585.2}, "wait_ms": 0.0, "model_calls": 2, "cache_hits": 0, "prompt_tokens": 603, "output_tokens": 193, "model": "gemini-3.5-flash-lite", "python": "3.13.2"}
+```
+
+**Criterion 5** — `run_capstone.py`, `c5()`, twenty calls to `agent.run_agent`, then the log is read back and checked against the 23 documented fields (`runlog.py`):
+
+```
+  log lines: 20 (expected 20)
+   1 completed          got completed          PASS
+   2 no_results         got no_results         PASS
+   3 model_unavailable  got model_unavailable  PASS
+   4 search_failed      got search_failed      PASS
+   5 completed          got completed          PASS
+   6 no_results         got no_results         PASS
+   7 model_unavailable  got model_unavailable  PASS
+   8 search_failed      got search_failed      PASS
+   9 completed          got completed          PASS
+  10 no_results         got no_results         PASS
+  11 model_unavailable  got model_unavailable  PASS
+  12 search_failed      got search_failed      PASS
+  13 completed          got completed          PASS
+  14 no_results         got no_results         PASS
+  15 model_unavailable  got model_unavailable  PASS
+  16 completed          got completed          PASS
+  17 no_results         got no_results         PASS
+  18 completed          got completed          PASS
+  19 completed          got completed          PASS
+  20 completed          got completed          PASS
+```
+
+Records for a no-results run, a bad-key run and a bad-strategy run, from `logs/capstone_trial1_c5.jsonl` (lines 2 to 4):
+
+```
+{"ts": "2026-11-14T20:25:54.112+00:00", "run_id": "96db93ac", "entrypoint": "run_capstone.py", "query": "denim jacket under $5", "strategy": "category", "parsed": {"description": "denim jacket", "size": null, "max_price": 5.0}, "wardrobe_items": 10, "outcome": "no_results", "error": "No listings matched 'denim jacket' under $5. Try a higher max price or different keywords.", "n_results": 0, "selected": null, "switched_from": null, "price_verdict": null, "fit_card_chars": null, "duration_ms": 304.6, "step_ms": {"parse": 0.1, "search": 304.4}, "wait_ms": 0.0, "model_calls": 0, "cache_hits": 0, "prompt_tokens": 0, "output_tokens": 0, "model": "gemini-3.5-flash-lite", "python": "3.13.2"}
+{"ts": "2026-11-14T20:25:54.565+00:00", "run_id": "51e1a679", "entrypoint": "run_capstone.py", "query": "platform sneakers size 8", "strategy": "category", "parsed": {"description": "platform sneakers", "size": "US 8", "max_price": null}, "wardrobe_items": 10, "outcome": "model_unavailable", "error": "Found an item, but couldn't get outfit ideas. The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com.", "n_results": 1, "selected": {"id": "lst_019", "title": "Platform Sneakers — White Chunky Sole", "price": 48.0, "platform": "poshmark"}, "switched_from": null, "price_verdict": "about average", "fit_card_chars": null, "duration_ms": 452.7, "step_ms": {"parse": 0.0, "search": 277.8, "select": 0.0, "compare": 0.3, "suggest": 174.5}, "wait_ms": 0.0, "model_calls": 1, "cache_hits": 0, "prompt_tokens": 0, "output_tokens": 0, "model": "gemini-3.5-flash-lite", "python": "3.13.2"}
+{"ts": "2026-11-14T20:25:54.860+00:00", "run_id": "43c2c863", "entrypoint": "run_capstone.py", "query": "corduroy jacket", "strategy": "semantic", "parsed": {"description": "corduroy jacket", "size": null, "max_price": null}, "wardrobe_items": 10, "outcome": "search_failed", "error": "Couldn't search the listings. Couldn't call 'search_listings' over MCP: unhandled errors in a TaskGroup (1 sub-exception)\nCheck that mcp_server.py runs on its own first:\n    python mcp_server.py\nIf it exits immediately with an error, fix that before coming back here.", "n_results": 0, "selected": null, "switched_from": null, "price_verdict": null, "fit_card_chars": null, "duration_ms": 294.2, "step_ms": {"parse": 0.0, "search": 294.1}, "wait_ms": 0.0, "model_calls": 0, "cache_hits": 0, "prompt_tokens": 0, "output_tokens": 0, "model": "gemini-3.5-flash-lite", "python": "3.13.2"}
+```
+
+**Caveats.** The fresh queries and labels were drafted by me (the assistant), not written by the student, and the labels were not independently checked; the file says so. Trial 1's console output was copied from the terminal into `trial1_raw.txt` because the `tee` command for that trial was broken across lines and wrote no file. `eval_retrieval.py` (with the `--set fresh` option the trials used) was committed after the trials, not before.
